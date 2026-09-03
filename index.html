@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#0b1220" />
+<title>Michael Digital Twin Office</title>
+<style>
+:root{--bg:#07111f;--panel:rgba(10,18,31,.88);--line:rgba(255,255,255,.12);--text:#eef2f7;--muted:#9aa7b7;--accent:#f2b84b;--ok:#6ee7b7}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:Inter,"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;color:var(--text);touch-action:none}button{font:inherit}#app{position:fixed;inset:0}canvas{display:block;width:100%;height:100%;outline:none}
+.hud{position:fixed;z-index:20;pointer-events:none}.top{top:max(14px,env(safe-area-inset-top));left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.brand{background:rgba(4,10,20,.66);border:1px solid var(--line);backdrop-filter:blur(12px);padding:12px 14px;border-radius:14px;max-width:min(74vw,560px)}.brand h1{margin:0;font-size:clamp(16px,2.5vw,22px);letter-spacing:.04em}.brand p{margin:5px 0 0;font-size:12px;color:var(--muted)}.stats{background:rgba(4,10,20,.66);border:1px solid var(--line);backdrop-filter:blur(12px);padding:9px 12px;border-radius:12px;font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ok);white-space:nowrap}
+.bottom{left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:8px;flex-wrap:wrap;pointer-events:auto}.navbtn{border:1px solid var(--line);background:rgba(10,18,31,.78);color:#fff;border-radius:999px;padding:10px 13px;font-size:12px;cursor:pointer;backdrop-filter:blur(12px);transition:.18s}.navbtn:hover,.navbtn.active{background:var(--accent);color:#151515;border-color:transparent}.navbtn:active{transform:scale(.96)}
+.tip{position:fixed;z-index:16;left:50%;transform:translateX(-50%);top:82px;padding:8px 11px;border-radius:999px;background:rgba(5,11,20,.66);border:1px solid var(--line);font-size:12px;color:#d9e1ea;pointer-events:none;transition:.25s}.tip.hide{opacity:0;transform:translate(-50%,-8px)}
+.drawer{position:fixed;z-index:30;top:0;right:0;width:min(420px,92vw);height:100%;background:var(--panel);border-left:1px solid var(--line);backdrop-filter:blur(18px);padding:calc(22px + env(safe-area-inset-top)) 22px calc(22px + env(safe-area-inset-bottom));transform:translateX(105%);transition:transform .38s cubic-bezier(.2,.75,.2,1);overflow:auto;touch-action:pan-y}.drawer.open{transform:translateX(0)}.drawer .close{position:absolute;right:18px;top:calc(14px + env(safe-area-inset-top));width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.06);color:white;cursor:pointer}.kicker{margin-top:40px;color:var(--accent);font-size:12px;font-weight:700;letter-spacing:.12em}.drawer h2{font-size:26px;margin:8px 0 10px}.drawer p{color:#c4ced9;line-height:1.75;font-size:14px}.cards{display:grid;gap:10px;margin-top:18px}.card{padding:13px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.04)}.card b{font-size:13px}.card small{display:block;color:var(--muted);margin-top:5px;line-height:1.5}
+.overlay{position:fixed;z-index:40;inset:0;display:grid;place-items:center;background:#07111f;transition:opacity .5s}.overlay.done{opacity:0;pointer-events:none}.loader{text-align:center}.loader h2{margin:0 0 8px;font-size:20px}.loader p{margin:0;color:var(--muted);font-size:12px}.bar{width:min(320px,75vw);height:4px;background:rgba(255,255,255,.1);border-radius:99px;margin-top:16px;overflow:hidden}.bar span{display:block;width:40%;height:100%;background:var(--accent);animation:load 1.2s ease-in-out infinite alternate}@keyframes load{to{transform:translateX(150%)}}
+.context{position:fixed;z-index:18;pointer-events:none;padding:7px 10px;border-radius:8px;background:rgba(3,8,16,.88);border:1px solid rgba(242,184,75,.45);font-size:11px;color:#ffd98c;opacity:0;transform:translate(-50%,-120%);transition:opacity .12s;white-space:nowrap}.context.show{opacity:1}
+@media(max-width:720px){.stats{display:none}.brand{max-width:88vw}.bottom{gap:6px}.navbtn{padding:9px 10px;font-size:11px}.tip{top:96px;max-width:88vw;text-align:center}.drawer{width:100vw}.brand p{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"}}</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<div class="overlay" id="loading"><div class="loader"><h2>Michael Digital Twin Office</h2><p>Three.js interactive white-box loading</p><div class="bar"><span></span></div></div></div>
+<div class="hud top"><div class="brand"><h1>MICHAEL DIGITAL TWIN OFFICE</h1><p>營造工程治理 × 採購發包 × 成本控制 × AI Automation</p></div><div class="stats" id="stats">FPS --<br>CALLS --<br>TRIS --<br>DPR --</div></div>
+<div class="tip" id="tip">拖曳旋轉視角・點擊金色互動區・雙指縮放</div>
+<div class="hud bottom">
+<button class="navbtn active" data-view="overview">全景</button>
+<button class="navbtn" data-view="desk">主管桌</button>
+<button class="navbtn" data-view="project">工程牆</button>
+<button class="navbtn" data-view="procurement">採購櫃</button>
+<button class="navbtn" data-view="ai">AI Lab</button>
+<button class="navbtn" data-view="knowledge">知識庫</button>
+<button class="navbtn" id="themeBtn">☾ 日夜</button>
+</div>
+<div class="context" id="context"></div>
+<aside class="drawer" id="drawer"><button class="close" id="closeDrawer">×</button><div class="kicker" id="panelKicker">EXECUTIVE OFFICE</div><h2 id="panelTitle">專案資訊</h2><p id="panelBody"></p><div class="cards" id="panelCards"></div></aside>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const app=document.getElementById('app'),drawer=document.getElementById('drawer'),contextEl=document.getElementById('context'),tip=document.getElementById('tip'),stats=document.getElementById('stats');
+const scene=new THREE.Scene(); scene.background=new THREE.Color('#d8d2ca'); scene.fog=new THREE.Fog('#d8d2ca',13,24);
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,60); camera.position.set(7.2,5.4,8.6);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,1.5)); renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05; app.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.dampingFactor=.065; controls.target.set(0,1.1,0); controls.minDistance=3.5; controls.maxDistance=14; controls.maxPolarAngle=Math.PI*.485; controls.enablePan=false;
+const ambient=new THREE.HemisphereLight(0xfff5e8,0x5f6d7e,1.55); scene.add(ambient); const sun=new THREE.DirectionalLight(0xfff0d6,2.1); sun.position.set(5,9,4); scene.add(sun);
+
+const mat=(c,rough=.82)=>new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:.02});
+const M={floor:mat('#d8d0c4'),wall:mat('#ebe6de'),wood:mat('#654936'),dark:mat('#20252c'),metal:mat('#87909a',.45),screen:mat('#15384d',.4),shelf:mat('#8b735e'),accent:mat('#f2b84b',.55),glass:new THREE.MeshStandardMaterial({color:'#9bd8e8',transparent:true,opacity:.2,roughness:.15,metalness:.05})};
+function box(n,s,p,m,parent=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(...s),m);o.name=n;o.position.set(...p);parent.add(o);return o}
+function cyl(n,r,h,p,m,parent=scene){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,20),m);o.name=n;o.position.set(...p);parent.add(o);return o}
+
+const room=new THREE.Group(); room.name='ENV_Room'; scene.add(room);
+box('ENV_Floor',[10,.18,7],[0,-.09,0],M.floor,room); box('ENV_BackWall',[10,4.4,.16],[0,2.1,-3.45],M.wall,room); box('ENV_LeftWall',[.16,4.4,7],[-4.92,2.1,0],M.wall,room);
+box('ENV_Window',[3.5,2.3,.05],[-4.82,2.45,0.2],M.glass,room); box('ENV_WindowFrameV',[.07,2.35,.1],[-4.75,2.45,.2],M.metal,room); box('ENV_WindowFrameH',[.1,.07,3.45],[-4.75,2.45,.2],M.metal,room).rotation.y=Math.PI/2;
+
+// Executive desk
+const desk=new THREE.Group(); desk.name='VIS_ExecutiveDesk'; scene.add(desk); box('DeskTop',[3.5,.18,1.45],[0,1.02,1.1],M.wood,desk); box('DeskLegL',[.22,.95,1.1],[-1.38,.52,1.1],M.dark,desk); box('DeskLegR',[.22,.95,1.1],[1.38,.52,1.1],M.dark,desk); box('DeskScreen',[1.45,.85,.09],[0,1.75,.82],M.screen,desk); box('DeskStand',[.12,.55,.12],[0,1.37,.9],M.metal,desk);
+// Chair
+const chair=new THREE.Group();scene.add(chair);cyl('ChairBase',.52,.08,[0,.16,2.45],M.dark,chair);cyl('ChairStem',.08,.72,[0,.54,2.45],M.metal,chair);box('ChairSeat',[1.05,.16,1],[0,.88,2.45],M.dark,chair);box('ChairBack',[1.05,1.25,.16],[0,1.55,2.85],M.dark,chair);
+
+// Project wall
+box('VIS_ProjectWall',[3.65,2.0,.12],[1.75,2.25,-3.28],M.dark);for(let i=0;i<3;i++){const panel=box('ProjectPanel'+i,[1.02,1.35,.05],[.55+i*1.2,2.25,-3.19],i===1?M.screen:M.metal);panel.material=panel.material.clone();}
+// procurement cabinet
+const cab=new THREE.Group();cab.name='VIS_Procurement';scene.add(cab);box('Cabinet',[1.6,2.1,.65],[-3.55,1.05,-2.7],M.shelf,cab);for(let y=.45;y<1.9;y+=.48)box('Shelf',[1.45,.05,.68],[-3.55,y,-2.68],M.dark,cab);
+// AI station
+const ai=new THREE.Group();ai.name='VIS_AILab';scene.add(ai);box('AITable',[2.2,.14,1.0],[-2.55,.88,1.4],M.dark,ai);box('AIScreen',[1.55,.95,.08],[-2.55,1.55,1.05],M.screen,ai);cyl('AIOrb',.33,.66,[-2.55,1.35,1.8],M.accent,ai).rotation.x=Math.PI/2;
+// knowledge
+const know=new THREE.Group();know.name='VIS_Knowledge';scene.add(know);box('Bookshelf',[1.8,2.45,.55],[3.75,1.22,-2.55],M.shelf,know);for(let y=.35;y<2.2;y+=.5)box('KShelf',[1.65,.05,.58],[3.75,y,-2.52],M.dark,know);for(let i=0;i<8;i++){const b=box('Book'+i,[.12,.33,.34],[3.08+(i%4)*.28,.55+Math.floor(i/4)*.52,-2.18],i%2?M.accent:M.metal,know);b.rotation.z=(i%3-1)*.05;}
+
+// Hitboxes only, intentionally low-poly and invisible
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2(),hitboxes=[];
+function hit(name,size,pos,view){const h=new THREE.Mesh(new THREE.BoxGeometry(...size),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));h.name='HIT_'+name;h.userData.view=view;h.position.set(...pos);scene.add(h);hitboxes.push(h);return h}
+hit('Desk',[3.9,2.0,2.1],[0,1.2,1.2],'desk');hit('Project',[4.0,2.35,.55],[1.75,2.15,-3.12],'project');hit('Procurement',[2.0,2.5,1.1],[-3.55,1.25,-2.55],'procurement');hit('AI',[2.6,2.0,1.8],[-2.55,1.25,1.4],'ai');hit('Knowledge',[2.1,2.8,1.0],[3.75,1.35,-2.45],'knowledge');
+
+const VIEWS={
+overview:{p:[7.2,5.4,8.6],t:[0,1.1,0]},
+desk:{p:[3.3,2.55,4.25],t:[0,1.35,1.05]},
+project:{p:[2.1,2.55,1.0],t:[1.75,2.05,-3.1]},
+procurement:{p:[-1.15,2.1,-.4],t:[-3.55,1.2,-2.5]},
+ai:{p:[-4.9,2.5,4.25],t:[-2.55,1.25,1.35]},
+knowledge:{p:[5.8,2.8,.4],t:[3.75,1.35,-2.45]}};
+const CONTENT={
+desk:{k:'EXECUTIVE DASHBOARD',t:'工程治理總覽',b:'以主管視角整合進度、成本、採購、契約與風險。這裡未來可串接實際 Dashboard 或 Power BI。',c:[['專案治理','WBS、要徑、成本與風險 Gate'],['主管決策','AI 協助整理與預警，簽核與決策仍由人負責'],['狀態','Three.js White-box V0.1']]},
+project:{k:'PROJECT CONTROL ROOM',t:'代表工程與專案控制',b:'以工程牆呈現代表專案、工期、數量、施工界面與管理成果。後續可替換為實際工程照片及輕量 BIM。',c:[['進度','Baseline / Update / Recovery'],['成本','Budget / Commitment / Actual / Forecast'],['界面','主責、配合、移交、查驗、成品保護']]},
+procurement:{k:'PROCUREMENT WAR ROOM',t:'採購發包與契約界面',b:'把詢價、比價、議價、發包條件、付款、保固與界面管理轉成可追溯的管理資訊。',c:[['發包','需求→詢價→比價→議價→決標'],['風險','價格、交期、界面、履約能力'],['資料化','BOQ / WBS / Vendor / Contract']]},
+ai:{k:'AI AUTOMATION LAB',t:'AI 與工程自動化實驗室',b:'展示以 AI、Excel/VBA、Power BI、Apps Script 與 Agent 改善營造管理流程的實作。',c:[['原則','先表單→資料→規則→流程→自動化→AI'],['AI角色','分析、整理、檢核、預警、初稿'],['驗收','必須有測試資料與可重現成果']]},
+knowledge:{k:'KNOWLEDGE LIBRARY',t:'知識庫・課程・Skill',b:'將工程經驗從一次性回答轉化為可重複使用的 SOP、表單、教材與 Skill。',c:[['知識回寫','專案→案例→規則→Skill'],['課程','工程管理、採購、AI 導入'],['出版','營造業數位轉型與標準化採購']]}};
+
+let cameraState='IDLE',activeView='overview',hovered=null,isNight=false,down={x:0,y:0,t:0};
+function setNav(view){document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view))}
+function closePanel(){drawer.classList.remove('open')}
+function openPanel(view){const d=CONTENT[view];if(!d)return;document.getElementById('panelKicker').textContent=d.k;document.getElementById('panelTitle').textContent=d.t;document.getElementById('panelBody').textContent=d.b;document.getElementById('panelCards').innerHTML=d.c.map(x=>`<div class="card"><b>${x[0]}</b><small>${x[1]}</small></div>`).join('');drawer.classList.add('open')}
+function transition(view,showPanel=true){if(!VIEWS[view])return; cameraState='TRANSITIONING'; activeView=view; controls.enabled=false; closePanel(); gsap.killTweensOf(camera.position);gsap.killTweensOf(controls.target);const v=VIEWS[view],dur=view==='overview'?1.05:1.25;gsap.to(camera.position,{x:v.p[0],y:v.p[1],z:v.p[2],duration:dur,ease:'power2.inOut'});gsap.to(controls.target,{x:v.t[0],y:v.t[1],z:v.t[2],duration:dur,ease:'power2.inOut',onUpdate:()=>controls.update(),onComplete:()=>{cameraState=view==='overview'?'IDLE':'FOCUSED';controls.enabled=true;setNav(view);if(showPanel&&view!=='overview')openPanel(view)}})}
+function updatePointer(e){const r=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-r.left)/r.width)*2-1;pointer.y=-((e.clientY-r.top)/r.height)*2+1}
+function pick(e){updatePointer(e);raycaster.setFromCamera(pointer,camera);return raycaster.intersectObjects(hitboxes,false)[0]||null}
+renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
+renderer.domElement.addEventListener('pointerup',e=>{const dist=Math.hypot(e.clientX-down.x,e.clientY-down.y),dt=performance.now()-down.t;if(dist<9&&dt<600&&cameraState!=='TRANSITIONING'){const h=pick(e);if(h)transition(h.object.userData.view,true)}});
+renderer.domElement.addEventListener('pointermove',e=>{if(e.pointerType==='touch')return;const h=pick(e);const n=h?.object?.userData?.view||null;if(n!==hovered){hovered=n;renderer.domElement.style.cursor=n?'pointer':'grab';contextEl.classList.toggle('show',!!n);contextEl.textContent=n?CONTENT[n].t:''}contextEl.style.left=e.clientX+'px';contextEl.style.top=e.clientY+'px'});
+renderer.domElement.addEventListener('pointerleave',()=>{contextEl.classList.remove('show');hovered=null});
+document.querySelectorAll('.navbtn[data-view]').forEach(b=>b.addEventListener('click',()=>{if(cameraState!=='TRANSITIONING')transition(b.dataset.view,b.dataset.view!=='overview')}));
+document.getElementById('closeDrawer').addEventListener('click',()=>{closePanel();transition('overview',false)});
+document.getElementById('themeBtn').addEventListener('click',()=>{isNight=!isNight;const bg=new THREE.Color(isNight?'#07111f':'#d8d2ca');gsap.to(scene.background,{r:bg.r,g:bg.g,b:bg.b,duration:.8});scene.fog.color.copy(bg);gsap.to(ambient,{intensity:isNight?.65:1.55,duration:.8});gsap.to(sun,{intensity:isNight?.25:2.1,duration:.8});document.getElementById('themeBtn').textContent=isNight?'☀ 日間':'☾ 日夜'});
+
+let frames=0,last=performance.now(),fps=60,lowSeconds=0;function animate(now){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);frames++;if(now-last>1000){fps=Math.round(frames*1000/(now-last));frames=0;last=now;const inf=renderer.info.render;stats.innerHTML=`FPS ${fps}<br>CALLS ${inf.calls}<br>TRIS ${inf.triangles.toLocaleString()}<br>DPR ${renderer.getPixelRatio().toFixed(1)}`;lowSeconds=fps<32?lowSeconds+1:0;if(lowSeconds>=3&&renderer.getPixelRatio()>1){renderer.setPixelRatio(1);renderer.setSize(innerWidth,innerHeight,false);lowSeconds=0}}}requestAnimationFrame(animate);
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,innerWidth<760?1.35:1.5))}addEventListener('resize',resize,{passive:true});
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();stats.innerHTML='WEBGL CONTEXT LOST';});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)gsap.globalTimeline.pause();else gsap.globalTimeline.resume()});
+setTimeout(()=>document.getElementById('loading').classList.add('done'),650);setTimeout(()=>tip.classList.add('hide'),5200);
+</script>
+</body>
+</html>
