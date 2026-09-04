@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { buildGoldenReferenceStudio } from './spatial-studio.js';
 
 export const REAL_ASSET_REGISTRY = {
   executiveChair: {
@@ -112,9 +113,7 @@ function normalizeByAxis(root, axis, targetSize, floorY = 0.02) {
   const size = new THREE.Vector3();
   box.getSize(size);
   const current = size[axis];
-  if (!Number.isFinite(current) || current <= 0.0001) {
-    throw new Error(`asset has invalid ${axis}-axis bounding box`);
-  }
+  if (!Number.isFinite(current) || current <= 0.0001) throw new Error(`asset has invalid ${axis}-axis bounding box`);
   const scale = targetSize / current;
   root.scale.multiplyScalar(scale);
   root.updateMatrixWorld(true);
@@ -130,72 +129,31 @@ function normalizeByAxis(root, axis, targetSize, floorY = 0.02) {
 
 function chairMaterial(node) {
   const key = `${node.name || ''} ${node.material?.name || ''}`.toLowerCase();
-  const isCushion = /pillow|seat|cush|leather|fabric|uphol/.test(key);
-  if (isCushion) {
-    return new THREE.MeshPhysicalMaterial({
-      color: 0x6b2426,
-      roughness: 0.34,
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.44,
-    });
+  if (/pillow|seat|cush|leather|fabric|uphol/.test(key)) {
+    return new THREE.MeshPhysicalMaterial({ color: 0x6b2426, roughness: 0.34, clearcoat: 0.3, clearcoatRoughness: 0.44 });
   }
-  return new THREE.MeshPhysicalMaterial({
-    color: 0x3b2419,
-    roughness: 0.4,
-    clearcoat: 0.12,
-    clearcoatRoughness: 0.5,
-  });
+  return new THREE.MeshPhysicalMaterial({ color: 0x3b2419, roughness: 0.4, clearcoat: 0.12, clearcoatRoughness: 0.5 });
 }
 
 function warmWalnutMaterial(node) {
   const key = `${node.name || ''} ${node.material?.name || ''}`.toLowerCase();
-  const isHardware = /handle|metal|tray/.test(key);
-  if (isHardware) {
-    return new THREE.MeshStandardMaterial({ color: 0x3b332c, roughness: 0.3, metalness: 0.82 });
-  }
-  return new THREE.MeshPhysicalMaterial({
-    color: 0x4e2b1d,
-    roughness: 0.34,
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.46,
-  });
+  if (/handle|metal|tray/.test(key)) return new THREE.MeshStandardMaterial({ color: 0x3b332c, roughness: 0.3, metalness: 0.82 });
+  return new THREE.MeshPhysicalMaterial({ color: 0x4e2b1d, roughness: 0.34, clearcoat: 0.2, clearcoatRoughness: 0.46 });
 }
 
 function lampMaterial() {
-  return new THREE.MeshPhysicalMaterial({
-    color: 0xb7833f,
-    roughness: 0.23,
-    metalness: 0.84,
-    clearcoat: 0.2,
-    clearcoatRoughness: 0.35,
-  });
+  return new THREE.MeshPhysicalMaterial({ color: 0xb7833f, roughness: 0.23, metalness: 0.84, clearcoat: 0.2, clearcoatRoughness: 0.35 });
 }
 
 function plantMaterial(node) {
   const key = `${node.name || ''} ${node.material?.name || ''}`.toLowerCase();
-  const isLeaf = /plant|leaf|leave|foliage/.test(key);
-  const isSoil = /soil|dirt|ground/.test(key);
-  if (isLeaf) {
-    return new THREE.MeshPhysicalMaterial({
-      color: 0x315b38,
-      roughness: 0.78,
-      sheen: 0.12,
-      sheenRoughness: 0.8,
-      side: THREE.DoubleSide,
-    });
-  }
-  if (isSoil) return new THREE.MeshStandardMaterial({ color: 0x2d2119, roughness: 1 });
+  if (/plant|leaf|leave|foliage/.test(key)) return new THREE.MeshPhysicalMaterial({ color: 0x315b38, roughness: 0.78, sheen: 0.12, sheenRoughness: 0.8, side: THREE.DoubleSide });
+  if (/soil|dirt|ground/.test(key)) return new THREE.MeshStandardMaterial({ color: 0x2d2119, roughness: 1 });
   return new THREE.MeshStandardMaterial({ color: 0x654938, roughness: 0.88 });
 }
 
 function attachMetadata(object, spec) {
-  object.userData.asset = {
-    id: spec.id,
-    source: spec.source,
-    license: spec.license,
-    format: spec.format,
-    attribution: spec.attribution || null,
-  };
+  object.userData.asset = { id: spec.id, source: spec.source, license: spec.license, format: spec.format, attribution: spec.attribution || null };
   return object;
 }
 
@@ -248,7 +206,6 @@ export async function loadLowCabinetPair(scene, options = {}) {
   cabinet.rotation.y = options.rotationY ?? 0;
   attachMetadata(cabinet, spec);
   scene.add(cabinet);
-
   const right = cabinet.clone(true);
   right.name = 'VISUAL_LowCabinet_Right';
   right.position.set(...(options.rightPosition ?? [3.75, 0, -3.6]));
@@ -271,12 +228,8 @@ export async function loadPottedPlant(scene, options = {}) {
 }
 
 export async function loadRC1RealAssets(scene, onProgress = () => {}) {
-  const result = {
-    loaded: [],
-    failed: [],
-    assetsLoaded: [],
-    assetsFailed: [],
-  };
+  buildGoldenReferenceStudio(scene);
+  const result = { loaded: [], failed: [], assetsLoaded: [], assetsFailed: [] };
   const jobs = [
     ['executiveChair', () => loadExecutiveChair(scene)],
     ['executiveDesk', () => loadExecutiveDesk(scene)],
@@ -284,7 +237,6 @@ export async function loadRC1RealAssets(scene, onProgress = () => {}) {
     ['lowCabinet', () => loadLowCabinetPair(scene)],
     ['pottedPlant', () => loadPottedPlant(scene)],
   ];
-
   await Promise.all(jobs.map(async ([id, task]) => {
     try {
       const object = await task();
@@ -296,14 +248,10 @@ export async function loadRC1RealAssets(scene, onProgress = () => {}) {
       onProgress({ id, status: 'failed', error, result });
     }
   }));
-
   const executiveSuiteIds = ['executiveChair', 'executiveDesk', 'deskLamp', 'lowCabinet'];
-  const suitePass = executiveSuiteIds.every((id) => result.assetsLoaded.includes(id));
-  const plantPass = result.assetsLoaded.includes('pottedPlant');
-  if (suitePass) result.loaded.push('executiveSuite');
+  if (executiveSuiteIds.every((id) => result.assetsLoaded.includes(id))) result.loaded.push('executiveSuite');
   else result.failed.push({ id: 'executiveSuite', message: 'one or more executive suite assets failed' });
-  if (plantPass) result.loaded.push('pottedPlant');
+  if (result.assetsLoaded.includes('pottedPlant')) result.loaded.push('pottedPlant');
   else result.failed.push({ id: 'pottedPlant', message: 'potted plant failed' });
-
   return result;
 }
