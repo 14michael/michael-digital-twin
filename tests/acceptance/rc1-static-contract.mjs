@@ -60,6 +60,14 @@ check('RC-01', 'Golden Reference 三面 Spatial UI 與主管焦點區存在', ()
   assert.match(assets, /buildGoldenReferenceStudio\(scene\)/);
 });
 
+check('RC-01', 'Golden Reference 會移除舊 Prototype 視覺並建立完整暖木空間層', () => {
+  assert.match(spatial, /removeLegacyPrototypeVisuals\(scene\)/);
+  for (const node of ['VISUAL_BackWall_WalnutField', 'VISUAL_LeftWall_WalnutField', 'VISUAL_RightWall_WalnutField', 'VISUAL_Keyboard', 'VISUAL_Phone', 'VISUAL_CoveWarmLight']) {
+    assert.match(spatial, new RegExp(node), `missing refined visual node: ${node}`);
+  }
+  assert.match(spatial, /legacyPrototypeVisualsRemoved/);
+});
+
 check('RC-05', 'Release 不得殘留 FBX 核心資產', () => {
   assert.doesNotMatch(assets, /format:\s*['"]fbx['"]/i, 'FBX core asset remains; convert/localize before release');
 });
