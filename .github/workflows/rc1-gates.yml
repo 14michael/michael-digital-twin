@@ -70,7 +70,18 @@ jobs:
           exit 1
 
       - name: Run RC1 desktop/mobile regression smoke
+        env:
+          RC1_EVIDENCE_DIR: artifacts/rc1-browser-smoke
         run: node tests/acceptance/rc1-browser-smoke.mjs
+
+      - name: Upload browser smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc1-browser-smoke-${{ github.sha }}
+          path: artifacts/rc1-browser-smoke
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Record browser evidence
         if: always()
@@ -78,3 +89,4 @@ jobs:
           echo "Browser smoke commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
           echo "Viewport evidence: desktop 1440x900; mobile 390x844 with touch emulation." >> "$GITHUB_STEP_SUMMARY"
           echo "Regression path: About → Career → Projects → Portfolio → AI Lab → Education → Overview; theme toggled twice; panel close verified." >> "$GITHUB_STEP_SUMMARY"
+          echo "Diagnostic artifact: rc1-browser-smoke-${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
