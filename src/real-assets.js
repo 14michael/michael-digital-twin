@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { buildGoldenReferenceStudio } from './spatial-studio.js';
 
@@ -43,16 +42,15 @@ export const REAL_ASSET_REGISTRY = {
   },
   pottedPlant: {
     id: 'potted_plant_04',
-    source: 'Poly Haven / Igrium polyhaven-models',
+    source: 'Poly Haven direct 2K glTF',
     license: 'CC0 source asset',
-    url: 'https://raw.githubusercontent.com/Igrium/polyhaven-models/master/Assets/models/props_garden/potted_plant_04.fbx',
-    format: 'fbx',
+    url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/potted_plant_04/potted_plant_04_2k.gltf',
+    format: 'gltf-2k',
     expectedRole: 'right-side interior plant',
     targetHeight: 1.55,
   },
 };
 
-const fbxLoader = new FBXLoader();
 const gltfLoader = new GLTFLoader();
 
 function withTimeout(load, url, timeoutMs = 15000) {
@@ -78,14 +76,6 @@ function withTimeout(load, url, timeoutMs = 15000) {
       },
     );
   });
-}
-
-function loadFBX(url, timeoutMs = 15000) {
-  return withTimeout(
-    (resolve, reject) => fbxLoader.load(url, resolve, undefined, reject),
-    url,
-    timeoutMs,
-  );
 }
 
 function loadGLTF(url, timeoutMs = 15000) {
@@ -216,7 +206,7 @@ export async function loadLowCabinetPair(scene, options = {}) {
 
 export async function loadPottedPlant(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.pottedPlant;
-  const plant = await loadFBX(spec.url, options.timeoutMs);
+  const plant = await loadGLTF(spec.url, options.timeoutMs);
   prepareMesh(plant, plantMaterial);
   normalizeByAxis(plant, 'y', options.targetHeight ?? spec.targetHeight, 0.02);
   plant.position.add(new THREE.Vector3(...(options.position ?? [4.85, 0, -0.45])));
