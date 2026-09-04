@@ -31,6 +31,15 @@ export const REAL_ASSET_REGISTRY = {
     expectedRole: 'brass desk lamp',
     targetHeight: 0.86,
   },
+  lowCabinet: {
+    id: 'modern_wooden_cabinet',
+    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru 1K glTF mirror',
+    license: 'CC0 source asset',
+    url: 'https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/modern_wooden_cabinet_1k.gltf/modern_wooden_cabinet_1k.gltf',
+    format: 'gltf-1k',
+    expectedRole: 'warm low cabinet pair',
+    targetWidth: 2.45,
+  },
   pottedPlant: {
     id: 'potted_plant_04',
     source: 'Poly Haven / Igrium polyhaven-models',
@@ -138,7 +147,7 @@ function chairMaterial(node) {
   });
 }
 
-function deskMaterial(node) {
+function warmWalnutMaterial(node) {
   const key = `${node.name || ''} ${node.material?.name || ''}`.toLowerCase();
   const isHardware = /handle|metal|tray/.test(key);
   if (isHardware) {
@@ -206,7 +215,7 @@ export async function loadExecutiveChair(scene, options = {}) {
 export async function loadExecutiveDesk(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.executiveDesk;
   const desk = await loadGLTF(spec.url, options.timeoutMs);
-  prepareMesh(desk, deskMaterial);
+  prepareMesh(desk, warmWalnutMaterial);
   normalizeByAxis(desk, 'x', options.targetWidth ?? spec.targetWidth, 0.02);
   desk.position.add(new THREE.Vector3(...(options.position ?? [0.15, 0, 0.35])));
   desk.rotation.y = options.rotationY ?? 0;
@@ -229,6 +238,25 @@ export async function loadDeskLamp(scene, options = {}) {
   return lamp;
 }
 
+export async function loadLowCabinetPair(scene, options = {}) {
+  const spec = REAL_ASSET_REGISTRY.lowCabinet;
+  const cabinet = await loadGLTF(spec.url, options.timeoutMs);
+  prepareMesh(cabinet, warmWalnutMaterial);
+  normalizeByAxis(cabinet, 'x', options.targetWidth ?? spec.targetWidth, 0.02);
+  cabinet.name = 'VISUAL_LowCabinet_Left';
+  cabinet.position.add(new THREE.Vector3(...(options.leftPosition ?? [-3.55, 0, -3.6])));
+  cabinet.rotation.y = options.rotationY ?? 0;
+  attachMetadata(cabinet, spec);
+  scene.add(cabinet);
+
+  const right = cabinet.clone(true);
+  right.name = 'VISUAL_LowCabinet_Right';
+  right.position.set(...(options.rightPosition ?? [3.75, 0, -3.6]));
+  attachMetadata(right, spec);
+  scene.add(right);
+  return [cabinet, right];
+}
+
 export async function loadPottedPlant(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.pottedPlant;
   const plant = await loadFBX(spec.url, options.timeoutMs);
@@ -243,22 +271,39 @@ export async function loadPottedPlant(scene, options = {}) {
 }
 
 export async function loadRC1RealAssets(scene, onProgress = () => {}) {
-  const result = { loaded: [], failed: [] };
+  const result = {
+    loaded: [],
+    failed: [],
+    assetsLoaded: [],
+    assetsFailed: [],
+  };
   const jobs = [
     ['executiveChair', () => loadExecutiveChair(scene)],
     ['executiveDesk', () => loadExecutiveDesk(scene)],
     ['deskLamp', () => loadDeskLamp(scene)],
+    ['lowCabinet', () => loadLowCabinetPair(scene)],
     ['pottedPlant', () => loadPottedPlant(scene)],
   ];
+
   await Promise.all(jobs.map(async ([id, task]) => {
     try {
       const object = await task();
-      result.loaded.push(id);
+      result.assetsLoaded.push(id);
       onProgress({ id, status: 'loaded', object, result });
     } catch (error) {
-      result.failed.push({ id, message: String(error?.message || error) });
+      const failure = { id, message: String(error?.message || error) };
+      result.assetsFailed.push(failure);
       onProgress({ id, status: 'failed', error, result });
     }
   }));
+
+  const executiveSuiteIds = ['executiveChair', 'executiveDesk', 'deskLamp', 'lowCabinet'];
+  const suitePass = executiveSuiteIds.every((id) => result.assetsLoaded.includes(id));
+  const plantPass = result.assetsLoaded.includes('pottedPlant');
+  if (suitePass) result.loaded.push('executiveSuite');
+  else result.failed.push({ id: 'executiveSuite', message: 'one or more executive suite assets failed' });
+  if (plantPass) result.loaded.push('pottedPlant');
+  else result.failed.push({ id: 'pottedPlant', message: 'potted plant failed' });
+
   return result;
 }
