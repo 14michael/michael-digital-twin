@@ -52,7 +52,6 @@ export const REAL_ASSET_REGISTRY = {
 };
 
 const gltfLoader = new GLTFLoader();
-const TRANSPARENT_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X9yGAAAAAElFTkSuQmCC';
 
 function withTimeout(load, url, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
@@ -87,18 +86,40 @@ function loadGLTF(url, timeoutMs = 15000) {
   );
 }
 
-function loadGLTFGeometryOnly(url, timeoutMs = 15000) {
-  const manager = new THREE.LoadingManager();
-  manager.setURLModifier((dependencyURL) => {
-    if (/\.(png|jpe?g|webp)(?:[?#].*)?$/i.test(dependencyURL)) return TRANSPARENT_PNG;
-    return dependencyURL;
-  });
-  const loader = new GLTFLoader(manager);
-  return withTimeout(
-    (resolve, reject) => loader.load(url, (gltf) => resolve(gltf.scene), undefined, reject),
-    url,
-    timeoutMs,
-  );
+async function loadGLTFGeometryOnly(url, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal, mode: 'cors' });
+    if (!response.ok) throw new Error(`asset response ${response.status}: ${url}`);
+    const source = await response.json();
+
+    // Preserve the authored mesh, buffers, node hierarchy, transforms and
+    // primitive/material assignments while removing only remote image payloads.
+    // The RC1 studio remaps every plant mesh to its own PBR material immediately
+    // after parse, so these texture/image definitions are not required at runtime.
+    source.images = [];
+    source.textures = [];
+    for (const material of source.materials || []) {
+      if (material.pbrMetallicRoughness) {
+        delete material.pbrMetallicRoughness.baseColorTexture;
+        delete material.pbrMetallicRoughness.metallicRoughnessTexture;
+      }
+      delete material.normalTexture;
+      delete material.occlusionTexture;
+      delete material.emissiveTexture;
+    }
+
+    const basePath = new URL('.', url).href;
+    return await new Promise((resolve, reject) => {
+      gltfLoader.parse(JSON.stringify(source), basePath, (gltf) => resolve(gltf.scene), reject);
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error(`asset timeout: ${url}`);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function prepareMesh(root, materialResolver) {
@@ -221,11 +242,6 @@ export async function loadLowCabinetPair(scene, options = {}) {
 
 export async function loadPottedPlant(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.pottedPlant;
-  // Poly Haven's standalone glTF currently references texture paths that 404 in
-  // browser use. We only need the authored plant mesh here because RC1 applies
-  // its own physically-based foliage/soil/pot materials immediately afterward.
-  // Replacing image dependencies with a 1px placeholder keeps the real geometry
-  // and prevents missing remote textures from poisoning Browser Smoke.
   const plant = await loadGLTFGeometryOnly(spec.url, options.timeoutMs);
   prepareMesh(plant, plantMaterial);
   normalizeByAxis(plant, 'y', options.targetHeight ?? spec.targetHeight, 0.02);
