@@ -27,6 +27,7 @@ jobs:
           node --check src/real-assets.js
           node --check src/spatial-studio.js
           node --check tests/acceptance/rc1-static-contract.mjs
+          node --check tests/acceptance/rc1-browser-smoke.mjs
 
       - name: RC1 static acceptance contract
         run: node tests/acceptance/rc1-static-contract.mjs
@@ -37,3 +38,43 @@ jobs:
           echo "RC1_SHA=${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
           echo "Static verification date: $(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_STEP_SUMMARY"
           echo "RC-05 intentionally remains blocking while core runtime assets use remote URLs." >> "$GITHUB_STEP_SUMMARY"
+
+  browser-smoke:
+    name: Desktop and 390px browser smoke
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [static-contract]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start static server
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/rc1-http.log 2>&1 &
+          echo $! > /tmp/rc1-http.pid
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:4173/app.html >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/rc1-http.log
+          exit 1
+
+      - name: Run RC1 desktop/mobile regression smoke
+        run: node tests/acceptance/rc1-browser-smoke.mjs
+
+      - name: Record browser evidence
+        if: always()
+        run: |
+          echo "Browser smoke commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Viewport evidence: desktop 1440x900; mobile 390x844 with touch emulation." >> "$GITHUB_STEP_SUMMARY"
+          echo "Regression path: About → Career → Projects → Portfolio → AI Lab → Education → Overview; theme toggled twice; panel close verified." >> "$GITHUB_STEP_SUMMARY"
