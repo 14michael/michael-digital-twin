@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export const REAL_ASSET_REGISTRY = {
   executiveChair: {
     id: 'modern_arm_chair_01',
-    source: 'Poly Haven / Igrium polyhaven-models',
+    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru 1K glTF mirror',
     license: 'CC0 source asset',
-    url: 'https://raw.githubusercontent.com/Igrium/polyhaven-models/master/Assets/models/furniture/modern_arm_chair_01.fbx',
+    url: 'https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/modern_arm_chair_01_1k.gltf/modern_arm_chair_01_1k.gltf',
+    format: 'gltf-1k',
     expectedRole: 'primary executive chair',
     targetHeight: 1.22,
   },
@@ -15,29 +17,55 @@ export const REAL_ASSET_REGISTRY = {
     source: 'Poly Haven / Igrium polyhaven-models',
     license: 'CC0 source asset',
     url: 'https://raw.githubusercontent.com/Igrium/polyhaven-models/master/Assets/models/props_garden/potted_plant_04.fbx',
+    format: 'fbx',
     expectedRole: 'right-side interior plant',
     targetHeight: 1.55,
   },
 };
 
-const loader = new FBXLoader();
+const fbxLoader = new FBXLoader();
+const gltfLoader = new GLTFLoader();
 
-function loadFBX(url, timeoutMs = 15000) {
+function withTimeout(load, url, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`asset timeout: ${url}`)), timeoutMs);
-    loader.load(
-      url,
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`asset timeout: ${url}`));
+    }, timeoutMs);
+
+    load(
       (object) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         resolve(object);
       },
-      undefined,
       (error) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         reject(error);
       },
     );
   });
+}
+
+function loadFBX(url, timeoutMs = 15000) {
+  return withTimeout(
+    (resolve, reject) => fbxLoader.load(url, resolve, undefined, reject),
+    url,
+    timeoutMs,
+  );
+}
+
+function loadGLTF(url, timeoutMs = 15000) {
+  return withTimeout(
+    (resolve, reject) => gltfLoader.load(url, (gltf) => resolve(gltf.scene), undefined, reject),
+    url,
+    timeoutMs,
+  );
 }
 
 function prepareMesh(root, materialResolver) {
@@ -68,7 +96,6 @@ function normalizeToHeight(root, targetHeight, floorY = 0.02) {
   const center = new THREE.Vector3();
   scaledBox.getCenter(center);
 
-  // Rebase x/z around the model origin and place the lowest point on the floor.
   root.position.x -= center.x;
   root.position.z -= center.z;
   root.position.y += floorY - scaledBox.min.y;
@@ -117,13 +144,18 @@ function plantMaterial(node) {
 
 export async function loadExecutiveChair(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.executiveChair;
-  const chair = await loadFBX(spec.url, options.timeoutMs);
+  const chair = await loadGLTF(spec.url, options.timeoutMs);
   prepareMesh(chair, chairMaterial);
   normalizeToHeight(chair, options.targetHeight ?? spec.targetHeight, 0.02);
   chair.position.add(new THREE.Vector3(...(options.position ?? [0.2, 0, 2.25])));
   chair.rotation.y = options.rotationY ?? Math.PI;
   chair.name = options.name ?? 'INTERACT_Chair';
-  chair.userData.asset = { id: spec.id, source: spec.source, license: spec.license };
+  chair.userData.asset = {
+    id: spec.id,
+    source: spec.source,
+    license: spec.license,
+    format: spec.format,
+  };
   scene.add(chair);
   return chair;
 }
@@ -136,7 +168,12 @@ export async function loadPottedPlant(scene, options = {}) {
   plant.position.add(new THREE.Vector3(...(options.position ?? [4.85, 0, -0.45])));
   plant.rotation.y = options.rotationY ?? -0.45;
   plant.name = options.name ?? 'INTERACT_Plant';
-  plant.userData.asset = { id: spec.id, source: spec.source, license: spec.license };
+  plant.userData.asset = {
+    id: spec.id,
+    source: spec.source,
+    license: spec.license,
+    format: spec.format,
+  };
   scene.add(plant);
   return plant;
 }
