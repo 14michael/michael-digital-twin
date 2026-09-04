@@ -6,6 +6,8 @@ const charcoal = new THREE.MeshStandardMaterial({ color: 0x151719, roughness: 0.
 const brass = new THREE.MeshStandardMaterial({ color: 0xb98b4a, roughness: 0.28, metalness: 0.82 });
 const burgundy = new THREE.MeshPhysicalMaterial({ color: 0x672b2a, roughness: 0.42, clearcoat: 0.22 });
 const stone = new THREE.MeshStandardMaterial({ color: 0x777067, roughness: 0.9 });
+const felt = new THREE.MeshStandardMaterial({ color: 0x262423, roughness: 0.95 });
+const screenBlack = new THREE.MeshPhysicalMaterial({ color: 0x0c1013, roughness: 0.26, metalness: 0.28, clearcoat: 0.18 });
 
 function box(scene, name, size, position, material, rotation = [0, 0, 0]) {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
@@ -64,6 +66,65 @@ function canvasPanel(scene, name, text, size, position, options = {}) {
   return panel;
 }
 
+function closeTo(value, target, tolerance = 0.035) {
+  return Math.abs(value - target) <= tolerance;
+}
+
+function removeLegacyPrototypeVisuals(scene) {
+  const namedLegacy = new Set(['about', 'career', 'projects']);
+  const exactLegacyPositions = [
+    [-4.15, 3.05, -4.055],
+    [0.6, 3.63, -4.105],
+    [-1.85, 0.56, 0.3],
+    [2.15, 0.56, 0.3],
+    [0.15, 0.72, 0.95],
+    [-1.72, 1.27, 0.18],
+    [-1.72, 1.69, 0.18],
+    [-1.52, 2.22, 0.18],
+    [0.25, 0.025, 1.4],
+  ];
+  const remove = [];
+  scene.children.forEach((object) => {
+    if (namedLegacy.has(object.name)) {
+      remove.push(object);
+      return;
+    }
+    if (!object.isMesh) return;
+    if (exactLegacyPositions.some(([x, y, z]) => closeTo(object.position.x, x) && closeTo(object.position.y, y) && closeTo(object.position.z, z))) {
+      remove.push(object);
+      return;
+    }
+    const legacyPortfolioFrame =
+      (closeTo(object.position.x, 6.02) || closeTo(object.position.x, 5.95)) &&
+      object.position.y >= 1.25 &&
+      object.position.y <= 3.9 &&
+      object.position.z >= -2.7 &&
+      object.position.z <= 0.7;
+    if (legacyPortfolioFrame) remove.push(object);
+  });
+  remove.forEach((object) => {
+    scene.remove(object);
+    object.geometry?.dispose?.();
+    if (Array.isArray(object.material)) object.material.forEach((material) => material.dispose?.());
+    else object.material?.dispose?.();
+  });
+  scene.userData.legacyPrototypeVisualsRemoved = remove.length;
+}
+
+function addArchitecturalEnvelope(scene) {
+  box(scene, 'VISUAL_BackWall_WalnutField', [12.18, 4.92, 0.06], [0, 2.55, -4.255], walnutDark);
+  box(scene, 'VISUAL_LeftWall_WalnutField', [0.06, 4.92, 8.55], [-6.17, 2.55, 0], walnutDark);
+  box(scene, 'VISUAL_RightWall_WalnutField', [0.06, 4.92, 8.55], [6.17, 2.55, 0], walnutDark);
+
+  for (let x = -5.7; x <= 5.7; x += 0.42) {
+    box(scene, `VISUAL_BackSlat_${x.toFixed(2)}`, [0.055, 4.7, 0.035], [x, 2.52, -4.205], walnut);
+  }
+
+  box(scene, 'VISUAL_BackPlinth', [12.1, 0.18, 0.18], [0, 0.18, -4.08], brass);
+  box(scene, 'VISUAL_LeftPlinth', [0.18, 0.18, 8.25], [-6.06, 0.18, 0], brass);
+  box(scene, 'VISUAL_RightPlinth', [0.18, 0.18, 8.25], [6.06, 0.18, 0], brass);
+}
+
 function addCareerWall(scene) {
   box(scene, 'VISUAL_CareerWall_Frame', [3.7, 4.05, 0.13], [-4.08, 2.55, -4.04], walnutDark);
   canvasPanel(scene, 'VISUAL_CareerWall_Content', 'CAREER\nJOURNEY', [3.18, 3.52], [-4.08, 2.62, -3.965], {
@@ -79,6 +140,7 @@ function addCareerWall(scene) {
   for (let i = 0; i < 4; i += 1) {
     const y = 1.36 + i * 0.73;
     const dot = new THREE.Mesh(new THREE.SphereGeometry(0.055, 18, 12), brass);
+    dot.name = `VISUAL_CareerTimelineDot_${i}`;
     dot.position.set(-5.34, y, -3.88);
     scene.add(dot);
   }
@@ -98,6 +160,7 @@ function addProjectWall(scene) {
     ],
   });
   const glow = new THREE.PointLight(0x78c7cf, 5.5, 4.5, 2.2);
+  glow.name = 'VISUAL_AIAccentGlow';
   glow.position.set(2.9, 2.25, -2.85);
   scene.add(glow);
 }
@@ -122,6 +185,42 @@ function addPortfolioWall(scene) {
   });
 }
 
+function addDeskAccessories(scene) {
+  const keyboard = box(scene, 'VISUAL_Keyboard', [0.95, 0.045, 0.34], [0.18, 1.24, 0.42], charcoal, [-0.03, 0, 0]);
+  keyboard.userData.decorativeOnly = true;
+  for (let row = 0; row < 4; row += 1) {
+    for (let col = 0; col < 12; col += 1) {
+      const key = box(
+        scene,
+        `VISUAL_Key_${row}_${col}`,
+        [0.055, 0.012, 0.052],
+        [-0.1 + col * 0.066, 1.27, 0.31 + row * 0.066],
+        screenBlack,
+      );
+      key.userData.decorativeOnly = true;
+    }
+  }
+
+  const phone = box(scene, 'VISUAL_Phone', [0.34, 0.025, 0.68], [1.36, 1.25, 0.3], screenBlack, [0, 0.18, 0]);
+  phone.userData.decorativeOnly = true;
+  const notebook = box(scene, 'VISUAL_Notebook', [0.78, 0.035, 0.58], [-1.05, 1.24, 0.38], burgundy, [0, -0.12, 0]);
+  notebook.userData.decorativeOnly = true;
+
+  const coaster = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.018, 40), felt);
+  coaster.name = 'VISUAL_Coaster';
+  coaster.position.set(1.72, 1.24, 0.2);
+  scene.add(coaster);
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.085, 0.24, 36), new THREE.MeshPhysicalMaterial({
+    color: 0xd6c8b8,
+    roughness: 0.38,
+    clearcoat: 0.22,
+  }));
+  cup.name = 'VISUAL_Cup';
+  cup.position.set(1.72, 1.37, 0.2);
+  cup.castShadow = true;
+  scene.add(cup);
+}
+
 function addExecutiveFocalZone(scene) {
   const rug = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.8, 0.045, 96), stone);
   rug.name = 'VISUAL_ExecutiveRug';
@@ -141,9 +240,12 @@ function addExecutiveFocalZone(scene) {
   const cove = box(scene, 'VISUAL_CoveLightHousing', [12.0, 0.1, 0.18], [0, 5.05, -4.04], charcoal);
   cove.receiveShadow = false;
   const strip = new THREE.RectAreaLight(0xffc37a, 5.4, 10.2, 0.18);
+  strip.name = 'VISUAL_CoveWarmLight';
   strip.position.set(0, 4.95, -3.86);
   strip.lookAt(0, 2.4, -1.2);
   scene.add(strip);
+
+  addDeskAccessories(scene);
 }
 
 function addEducationObject(scene) {
@@ -156,6 +258,8 @@ function addEducationObject(scene) {
 export function buildGoldenReferenceStudio(scene) {
   if (scene.userData.goldenReferenceBuilt) return;
   scene.userData.goldenReferenceBuilt = true;
+  removeLegacyPrototypeVisuals(scene);
+  addArchitecturalEnvelope(scene);
   addCareerWall(scene);
   addProjectWall(scene);
   addPortfolioWall(scene);
