@@ -45,13 +45,14 @@ export const REAL_ASSET_REGISTRY = {
     source: 'Poly Haven direct 2K glTF',
     license: 'CC0 source asset',
     url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/potted_plant_04/potted_plant_04_2k.gltf',
-    format: 'gltf-2k',
+    format: 'gltf-2k-geometry',
     expectedRole: 'right-side interior plant',
     targetHeight: 1.55,
   },
 };
 
 const gltfLoader = new GLTFLoader();
+const TRANSPARENT_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X9yGAAAAAElFTkSuQmCC';
 
 function withTimeout(load, url, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
@@ -81,6 +82,20 @@ function withTimeout(load, url, timeoutMs = 15000) {
 function loadGLTF(url, timeoutMs = 15000) {
   return withTimeout(
     (resolve, reject) => gltfLoader.load(url, (gltf) => resolve(gltf.scene), undefined, reject),
+    url,
+    timeoutMs,
+  );
+}
+
+function loadGLTFGeometryOnly(url, timeoutMs = 15000) {
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier((dependencyURL) => {
+    if (/\.(png|jpe?g|webp)(?:[?#].*)?$/i.test(dependencyURL)) return TRANSPARENT_PNG;
+    return dependencyURL;
+  });
+  const loader = new GLTFLoader(manager);
+  return withTimeout(
+    (resolve, reject) => loader.load(url, (gltf) => resolve(gltf.scene), undefined, reject),
     url,
     timeoutMs,
   );
@@ -206,7 +221,12 @@ export async function loadLowCabinetPair(scene, options = {}) {
 
 export async function loadPottedPlant(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.pottedPlant;
-  const plant = await loadGLTF(spec.url, options.timeoutMs);
+  // Poly Haven's standalone glTF currently references texture paths that 404 in
+  // browser use. We only need the authored plant mesh here because RC1 applies
+  // its own physically-based foliage/soil/pot materials immediately afterward.
+  // Replacing image dependencies with a 1px placeholder keeps the real geometry
+  // and prevents missing remote textures from poisoning Browser Smoke.
+  const plant = await loadGLTFGeometryOnly(spec.url, options.timeoutMs);
   prepareMesh(plant, plantMaterial);
   normalizeByAxis(plant, 'y', options.targetHeight ?? spec.targetHeight, 0.02);
   plant.position.add(new THREE.Vector3(...(options.position ?? [4.85, 0, -0.45])));
