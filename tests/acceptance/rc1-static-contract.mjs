@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 const app = fs.readFileSync(new URL('../../app.html', import.meta.url), 'utf8');
 const assets = fs.readFileSync(new URL('../../src/real-assets.js', import.meta.url), 'utf8');
+const spatial = fs.readFileSync(new URL('../../src/spatial-studio.js', import.meta.url), 'utf8');
 
 const checks = [];
 function check(id, description, fn) {
@@ -22,7 +23,7 @@ check('AT-12', '六個內容區與 Overview 導覽契約存在', () => {
 
 check('AT-14', '日夜切換控制與狀態函式存在', () => {
   assert.match(app, /id=["']themeToggle["']/);
-  assert.match(app, /setTheme\(/);
+  assert.match(app, /(applyTheme|setTheme)\(/);
 });
 
 check('AT-17', '390px 級手機版有 responsive CSS 契約', () => {
@@ -52,11 +53,18 @@ check('RC-01', '核心家具全部由 real asset registry 管理', () => {
   }
 });
 
+check('RC-01', 'Golden Reference 三面 Spatial UI 與主管焦點區存在', () => {
+  for (const node of ['VISUAL_CareerWall_Content', 'VISUAL_ProjectWall_Content', 'VISUAL_PortfolioWall_Frame', 'VISUAL_ExecutiveRug', 'VISUAL_DeskFrontLeatherInset']) {
+    assert.match(spatial, new RegExp(node), `missing golden-reference node: ${node}`);
+  }
+  assert.match(assets, /buildGoldenReferenceStudio\(scene\)/);
+});
+
 check('RC-05', 'Release 不得殘留 FBX 核心資產', () => {
   assert.doesNotMatch(assets, /format:\s*['"]fbx['"]/i, 'FBX core asset remains; convert/localize before release');
 });
 
-check('RC-05', '核心資產不得以遠端 raw GitHub URL 作正式 Release 來源', () => {
+check('RC-05', '核心資產不得以遠端 URL 作正式 Release 來源', () => {
   assert.doesNotMatch(assets, /url:\s*['"]https?:\/\//i, 'remote runtime asset dependency remains; vendor optimized GLB locally before release');
 });
 
