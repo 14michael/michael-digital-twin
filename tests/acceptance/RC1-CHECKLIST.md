@@ -22,7 +22,7 @@
 | AT-16 | Regression | 完整循環 overview→About→Career→Projects→Portfolio→AI Lab→Education→overview 全 PASS | PASS |
 | AT-17 | Mobile UI | 390px 級手機寬度可操作，導覽與資訊面板不互相遮擋 | PASS |
 | AT-18 | Touch | 拖曳、點擊與面板操作不互相衝突 | TODO |
-| AT-19 | Performance | 高解析度裝置有 DPR 上限；核心資產已壓縮 | TODO |
+| AT-19 | Performance | 高解析度裝置有 DPR 上限；核心資產已壓縮 | PASS |
 | AT-20 | Privacy | 不公開手機、完整住址、推薦人聯絡資料 | TODO |
 | AT-21 | Resume Accuracy | 經歷、學歷、證照、專案名稱與年份符合履歷來源 | TODO |
 | AT-22 | Claim Accuracy | 預估效益清楚標示為預估，不寫成已實現成果 | TODO |
@@ -44,9 +44,29 @@
 - Additional assertions: canvas renderer ready, all navigation buttons active when selected, panel opens/closes, theme round-trip returns to original state, mobile nav/panel do not overflow viewport, no fatal `console.error` / `pageerror`.
 - Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33931982658
 
-### Remaining release blocker
+### 2026-09-05 — GitHub Actions RC1 Gates Run #17
 
-RC-05 / AT-19 remains **TODO** because `src/real-assets.js` still loads core authored 3D assets from remote runtime URLs. `AGENTS.md` requires GLB / texture compression before release; therefore RC1 must not be merged to `main` until the assets are vendored/optimized locally and the static contract passes.
+- Commit: `691f22186d899cf2d27390f803d5606ca6c65f9d`
+- Result: **Static contract and syntax PASS; Desktop and 390px browser smoke PASS**
+- Browser smoke revalidated local real-asset loading, full navigation regression, theme round-trip, panel close, mobile viewport constraints, and no fatal `console.error` / `pageerror`.
+- Headless FPS remains diagnostic only because GitHub shared runners throttle `requestAnimationFrame`; no unsupported numeric CI FPS acceptance threshold is used.
+- Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33941010307
+
+### 2026-09-05 — RC1 Vendor Assets Run #3 / AT-19
+
+- Source commit: `7ba827c15a96b7bcc93ce717e50e8d87f73f6de5`
+- Generated asset commit: `ee59c5ec3d8a66bfcddb0a084e1ae091b138238e`
+- Result: **Vendor and quantization pipeline PASS**
+- Tool: `@gltf-transform/cli@4.2.1`
+- Geometry optimization: `KHR_mesh_quantization` on all five core authored GLBs.
+- Verified outputs: executive chair `172,612` bytes; executive desk `153,180` bytes; desk lamp `779,624` bytes; low cabinet `791,788` bytes; potted plant `175,128` bytes.
+- Manifest byte counts are checked against the generated GLBs; each GLB JSON chunk must declare `KHR_mesh_quantization`.
+- DPR cap remains enforced by the static contract (`1.55` desktop / `1.2` mobile ceiling).
+- Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33943791280
+
+### Remaining release work
+
+AT-19 is now PASS because the local core GLBs have explicit, reproducible geometry quantization evidence and the renderer DPR cap is already enforced. RC1 is still **not releasable** until the remaining visual UAT, hotspot/touch behavior, privacy/content accuracy, and deployment items are independently evidenced and marked PASS.
 
 ## Release Gate
 
