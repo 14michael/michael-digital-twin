@@ -58,6 +58,8 @@ jobs:
           path: _site
 
   deploy-preview:
+    environment:
+      name: rc1-preview
     runs-on: ubuntu-latest
     needs: build-preview
     steps:
