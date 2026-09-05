@@ -34,31 +34,29 @@ try {
 
   const start = { x: box.x + box.width * 0.55, y: box.y + box.height * 0.58 };
   const end = { x: start.x + Math.min(56, box.width * 0.14), y: start.y + 18 };
+  const cdp = await context.newCDPSession(page);
 
-  await canvas.dispatchEvent('pointerdown', {
-    pointerId: 71,
-    pointerType: 'touch',
-    isPrimary: true,
-    clientX: start.x,
-    clientY: start.y,
-    buttons: 1,
-  });
-  await canvas.dispatchEvent('pointermove', {
-    pointerId: 71,
-    pointerType: 'touch',
-    isPrimary: true,
-    clientX: end.x,
-    clientY: end.y,
-    buttons: 1,
-  });
-  await canvas.dispatchEvent('pointerup', {
-    pointerId: 71,
-    pointerType: 'touch',
-    isPrimary: true,
-    clientX: end.x,
-    clientY: end.y,
-    buttons: 0,
-  });
+  async function touchDrag(from, to) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1, id: 1 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ x: to.x, y: to.y, radiusX: 7, radiusY: 7, force: 1, id: 1 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
+
+  async function touchTap(point) {
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: point.x, y: point.y, radiusX: 7, radiusY: 7, force: 1, id: 2 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  }
+
+  await touchDrag(start, end);
 
   await page.waitForTimeout(250);
   assert.equal(await page.locator('#panel').evaluate((node) => node.classList.contains('open')), false,
@@ -73,29 +71,14 @@ try {
   await page.locator('#close').click({ noWaitAfter: true });
   await page.waitForFunction(() => !document.querySelector('#panel')?.classList.contains('open'));
 
-  await canvas.dispatchEvent('pointerdown', {
-    pointerId: 72,
-    pointerType: 'touch',
-    isPrimary: true,
-    clientX: start.x,
-    clientY: start.y,
-    buttons: 1,
-  });
-  await canvas.dispatchEvent('pointerup', {
-    pointerId: 72,
-    pointerType: 'touch',
-    isPrimary: true,
-    clientX: start.x,
-    clientY: start.y,
-    buttons: 0,
-  });
+  await touchTap(start);
   await page.waitForTimeout(250);
 
   assert.equal(await canvas.isVisible(), true, 'mobile-touch: renderer disappeared after touch gesture');
   assert.deepEqual(fatal, [], `mobile-touch browser errors:\n${fatal.join('\n')}`);
 
   console.log('RC1 mobile touch/panel interaction PASS');
-  console.log(JSON.stringify({ viewport: '390x844', dragPixels: Math.round(end.x - start.x), fatal }, null, 2));
+  console.log(JSON.stringify({ viewport: '390x844', dragPixels: Math.round(end.x - start.x), input: 'CDP native touch stream', fatal }, null, 2));
   await context.close();
 } finally {
   await browser.close();
