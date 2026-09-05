@@ -2,50 +2,52 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { buildGoldenReferenceStudio } from './spatial-studio.js';
 
+const RC1_ASSET_BASE = new URL('../assets/rc1/', import.meta.url);
+
 export const REAL_ASSET_REGISTRY = {
   executiveChair: {
     id: 'modern_arm_chair_01',
-    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru 1K glTF mirror',
+    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru mirror; vendored by scripts/vendor-rc1-assets.mjs',
     license: 'CC0 source asset',
-    url: 'https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/modern_arm_chair_01_1k.gltf/modern_arm_chair_01_1k.gltf',
-    format: 'gltf-1k',
+    url: new URL('executive-chair.glb', RC1_ASSET_BASE).href,
+    format: 'local-glb-geometry-only',
     expectedRole: 'primary executive chair',
     targetHeight: 1.22,
   },
   executiveDesk: {
     id: 'metal_office_desk',
-    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru 1K glTF mirror',
+    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru mirror; vendored by scripts/vendor-rc1-assets.mjs',
     license: 'CC0 source asset',
-    url: 'https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/metal_office_desk_1k.gltf/metal_office_desk_1k.gltf',
-    format: 'gltf-1k',
+    url: new URL('executive-desk.glb', RC1_ASSET_BASE).href,
+    format: 'local-glb-geometry-only',
     expectedRole: 'primary executive desk',
     targetWidth: 2.8,
   },
   deskLamp: {
     id: 'desk_lamp_karamellglass',
-    source: 'KaramellGlass / Sketchfab mirror in Teetertater Floorplan2Walkthru',
+    source: 'KaramellGlass / Sketchfab mirror in Teetertater Floorplan2Walkthru; vendored upstream GLB',
     license: 'CC-BY-4.0 — attribution required',
     attribution: 'Desk lamp by KaramellGlass, CC-BY-4.0',
-    url: 'https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/desk_lamp/scene.gltf',
-    format: 'gltf',
+    url: new URL('desk-lamp.glb', RC1_ASSET_BASE).href,
+    format: 'local-glb',
     expectedRole: 'brass desk lamp',
     targetHeight: 0.86,
   },
   lowCabinet: {
     id: 'modern_wooden_cabinet',
-    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru 1K glTF mirror',
+    source: 'Poly Haven CC0 / Teetertater Floorplan2Walkthru mirror; vendored by scripts/vendor-rc1-assets.mjs',
     license: 'CC0 source asset',
-    url: 'https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/modern_wooden_cabinet_1k.gltf/modern_wooden_cabinet_1k.gltf',
-    format: 'gltf-1k',
+    url: new URL('low-cabinet.glb', RC1_ASSET_BASE).href,
+    format: 'local-glb-geometry-only',
     expectedRole: 'warm low cabinet pair',
     targetWidth: 2.45,
   },
   pottedPlant: {
     id: 'potted_plant_04',
-    source: 'Poly Haven direct 2K glTF',
+    source: 'Poly Haven direct 2K glTF; vendored by scripts/vendor-rc1-assets.mjs',
     license: 'CC0 source asset',
-    url: 'https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/potted_plant_04/potted_plant_04_2k.gltf',
-    format: 'gltf-2k-geometry',
+    url: new URL('potted-plant.glb', RC1_ASSET_BASE).href,
+    format: 'local-glb-geometry-only',
     expectedRole: 'right-side interior plant',
     targetHeight: 1.55,
   },
@@ -84,42 +86,6 @@ function loadGLTF(url, timeoutMs = 15000) {
     url,
     timeoutMs,
   );
-}
-
-async function loadGLTFGeometryOnly(url, timeoutMs = 15000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, { signal: controller.signal, mode: 'cors' });
-    if (!response.ok) throw new Error(`asset response ${response.status}: ${url}`);
-    const source = await response.json();
-
-    // Preserve the authored mesh, buffers, node hierarchy, transforms and
-    // primitive/material assignments while removing only remote image payloads.
-    // The RC1 studio remaps every plant mesh to its own PBR material immediately
-    // after parse, so these texture/image definitions are not required at runtime.
-    source.images = [];
-    source.textures = [];
-    for (const material of source.materials || []) {
-      if (material.pbrMetallicRoughness) {
-        delete material.pbrMetallicRoughness.baseColorTexture;
-        delete material.pbrMetallicRoughness.metallicRoughnessTexture;
-      }
-      delete material.normalTexture;
-      delete material.occlusionTexture;
-      delete material.emissiveTexture;
-    }
-
-    const basePath = new URL('.', url).href;
-    return await new Promise((resolve, reject) => {
-      gltfLoader.parse(JSON.stringify(source), basePath, (gltf) => resolve(gltf.scene), reject);
-    });
-  } catch (error) {
-    if (error?.name === 'AbortError') throw new Error(`asset timeout: ${url}`);
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
 }
 
 function prepareMesh(root, materialResolver) {
@@ -242,7 +208,7 @@ export async function loadLowCabinetPair(scene, options = {}) {
 
 export async function loadPottedPlant(scene, options = {}) {
   const spec = REAL_ASSET_REGISTRY.pottedPlant;
-  const plant = await loadGLTFGeometryOnly(spec.url, options.timeoutMs);
+  const plant = await loadGLTF(spec.url, options.timeoutMs);
   prepareMesh(plant, plantMaterial);
   normalizeByAxis(plant, 'y', options.targetHeight ?? spec.targetHeight, 0.02);
   plant.position.add(new THREE.Vector3(...(options.position ?? [4.85, 0, -0.45])));
