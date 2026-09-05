@@ -90,6 +90,6 @@ jobs:
           echo "Browser smoke commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
           echo "Viewport evidence: desktop 1440x900; mobile 390x844 with touch emulation." >> "$GITHUB_STEP_SUMMARY"
           echo "Asset evidence: all five core local GLB assets must load before regression begins." >> "$GITHUB_STEP_SUMMARY"
-          echo "Performance evidence: requestAnimationFrame sample must remain >=30 FPS in desktop and 390px runs." >> "$GITHUB_STEP_SUMMARY"
+          echo "Performance evidence: requestAnimationFrame is recorded as a headless diagnostic only; hardware/user-agent smoothness remains RC-05 UAT." >> "$GITHUB_STEP_SUMMARY"
           echo "Regression path: About → Career → Projects → Portfolio → AI Lab → Education → Overview; theme toggled twice; panel close verified." >> "$GITHUB_STEP_SUMMARY"
           echo "Diagnostic artifact: rc1-browser-smoke-${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
