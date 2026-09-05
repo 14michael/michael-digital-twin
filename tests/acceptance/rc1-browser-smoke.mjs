@@ -25,6 +25,22 @@ async function capture(page, name) {
   return path;
 }
 
+async function waitForStudioReady(page, label) {
+  const canvas = page.locator('canvas').first();
+  await canvas.waitFor({ state: 'attached', timeout: 15_000 });
+  await page.waitForFunction(() => {
+    const node = document.querySelector('canvas');
+    if (!node) return false;
+    const rect = node.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && node.width > 0 && node.height > 0;
+  }, { timeout: 15_000 });
+  assert.equal(await canvas.isVisible(), true, `${label}: canvas not visible after renderer initialization`);
+
+  const overview = page.locator('.nav button[data-v="overview"]');
+  await overview.waitFor({ state: 'visible', timeout: 15_000 });
+  record(label, 'renderer and navigation ready');
+}
+
 async function openAndExercise(page, label) {
   page.on('pageerror', (error) => {
     const item = `${label}: pageerror: ${error.message}`;
@@ -42,8 +58,7 @@ async function openAndExercise(page, label) {
   record(label, `goto ${baseURL}`);
   const response = await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   assert.ok(response?.ok(), `${label}: app response not OK`);
-  await page.waitForSelector('canvas', { state: 'visible', timeout: 15_000 });
-  await page.waitForSelector('.nav button[data-v="overview"]', { state: 'visible' });
+  await waitForStudioReady(page, label);
   await capture(page, `${label}-00-loaded`);
 
   for (const view of viewOrder) {
@@ -79,7 +94,7 @@ async function openAndExercise(page, label) {
   await capture(page, `${label}-99-complete`);
 
   return {
-    canvas: await page.locator('canvas').isVisible(),
+    canvas: await page.locator('canvas').first().isVisible(),
     navButtons: await page.locator('.nav button').count(),
     width: await page.evaluate(() => innerWidth),
     height: await page.evaluate(() => innerHeight),
