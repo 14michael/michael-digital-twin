@@ -41,6 +41,40 @@ async function waitForStudioReady(page, label) {
   record(label, 'renderer and navigation ready');
 }
 
+async function waitForRealAssets(page, label) {
+  const status = page.locator('#status');
+  await status.waitFor({ state: 'visible', timeout: 15_000 });
+  await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('real assets 2/2 loaded'), { timeout: 20_000 });
+  const text = await status.textContent();
+  assert.match(text || '', /real assets 2\/2 loaded/, `${label}: core real assets did not fully load`);
+  record(label, text.trim());
+}
+
+async function measureAnimationFps(page, label, durationMs = 1600) {
+  const sample = await page.evaluate(async (duration) => {
+    const timestamps = [];
+    const started = performance.now();
+    await new Promise((resolve) => {
+      function frame(now) {
+        timestamps.push(now);
+        if (now - started >= duration) resolve();
+        else requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+    if (timestamps.length < 2) return { fps: 0, frames: timestamps.length, durationMs: 0 };
+    const elapsed = timestamps.at(-1) - timestamps[0];
+    return {
+      fps: elapsed > 0 ? ((timestamps.length - 1) * 1000) / elapsed : 0,
+      frames: timestamps.length,
+      durationMs: elapsed,
+    };
+  }, durationMs);
+  assert.ok(sample.fps >= 30, `${label}: animation FPS ${sample.fps.toFixed(1)} below RC1 30 FPS floor`);
+  record(label, `animation ${sample.fps.toFixed(1)} FPS over ${sample.durationMs.toFixed(0)} ms (${sample.frames} frames)`);
+  return sample;
+}
+
 async function openAndExercise(page, label) {
   page.on('pageerror', (error) => {
     const item = `${label}: pageerror: ${error.message}`;
@@ -59,6 +93,8 @@ async function openAndExercise(page, label) {
   const response = await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
   assert.ok(response?.ok(), `${label}: app response not OK`);
   await waitForStudioReady(page, label);
+  await waitForRealAssets(page, label);
+  const performance = await measureAnimationFps(page, label);
   await capture(page, `${label}-00-loaded`);
 
   for (const view of viewOrder) {
@@ -98,6 +134,7 @@ async function openAndExercise(page, label) {
     navButtons: await page.locator('.nav button').count(),
     width: await page.evaluate(() => innerWidth),
     height: await page.evaluate(() => innerHeight),
+    performance,
   };
 }
 
