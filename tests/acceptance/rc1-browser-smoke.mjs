@@ -77,6 +77,13 @@ async function measureAnimationFps(page, label, durationMs = 1600) {
   return sample;
 }
 
+async function clickUi(locator) {
+  // The studio is a same-document Three.js SPA. Explicitly disable navigation
+  // waiting so Playwright cannot mistake GSAP/UI work for a scheduled document
+  // navigation and turn a successful click into a 30s false timeout.
+  await locator.click({ noWaitAfter: true });
+}
+
 async function openAndExercise(page, label) {
   page.on('pageerror', (error) => {
     const item = `${label}: pageerror: ${error.message}`;
@@ -102,7 +109,7 @@ async function openAndExercise(page, label) {
   for (const view of viewOrder) {
     record(label, `open view ${view}`);
     const button = page.locator(`.nav button[data-v="${view}"]`);
-    await button.click();
+    await clickUi(button);
     await page.waitForTimeout(450);
     await page.waitForFunction(() => document.querySelector('#panel')?.classList.contains('open'));
     assert.equal(await button.getAttribute('class').then((value) => value?.includes('active')), true, `${label}: ${view} nav not active`);
@@ -110,23 +117,23 @@ async function openAndExercise(page, label) {
   }
 
   record(label, 'overview reset');
-  await page.locator('.nav button[data-v="overview"]').click();
+  await clickUi(page.locator('.nav button[data-v="overview"]'));
   await page.waitForTimeout(450);
   assert.equal(await page.locator('#panel').evaluate((node) => node.classList.contains('open')), false, `${label}: overview did not close panel`);
 
   record(label, 'theme toggle round-trip');
   const theme = page.locator('#themeToggle');
   const before = await theme.getAttribute('aria-pressed');
-  await theme.click();
+  await clickUi(theme);
   const after = await theme.getAttribute('aria-pressed');
   assert.notEqual(after, before, `${label}: theme toggle did not change state`);
-  await theme.click();
+  await clickUi(theme);
   assert.equal(await theme.getAttribute('aria-pressed'), before, `${label}: theme toggle did not return to original state`);
 
   record(label, 'panel close');
-  await page.locator('.nav button[data-v="about"]').click();
+  await clickUi(page.locator('.nav button[data-v="about"]'));
   await page.waitForTimeout(350);
-  await page.locator('#close').click();
+  await clickUi(page.locator('#close'));
   await page.waitForTimeout(350);
   assert.equal(await page.locator('#panel').evaluate((node) => node.classList.contains('open')), false, `${label}: close button failed`);
   await capture(page, `${label}-99-complete`);
