@@ -5,56 +5,67 @@
       "id": "executive-chair",
       "role": "Executive chair",
       "file": "executive-chair.glb",
-      "bytes": 242872,
+      "bytes": 172612,
       "source": "Poly Haven modern_arm_chair_01 via Teetertater/Floorplan2Walkthru mirror",
       "sourceUrl": "https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/modern_arm_chair_01_1k.gltf/modern_arm_chair_01_1k.gltf",
       "license": "CC0 source asset",
       "attribution": null,
-      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB."
+      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB. Geometry quantized with glTF Transform (KHR_mesh_quantization).",
+      "geometryCompression": "KHR_mesh_quantization"
     },
     {
       "id": "executive-desk",
       "role": "Executive desk",
       "file": "executive-desk.glb",
-      "bytes": 237188,
+      "bytes": 153180,
       "source": "Poly Haven metal_office_desk via Teetertater/Floorplan2Walkthru mirror",
       "sourceUrl": "https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/metal_office_desk_1k.gltf/metal_office_desk_1k.gltf",
       "license": "CC0 source asset",
       "attribution": null,
-      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB."
+      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB. Geometry quantized with glTF Transform (KHR_mesh_quantization).",
+      "geometryCompression": "KHR_mesh_quantization"
     },
     {
       "id": "desk-lamp",
       "role": "Desk lamp",
       "file": "desk-lamp.glb",
-      "bytes": 1207908,
+      "bytes": 779624,
       "source": "KaramellGlass desk lamp via Teetertater/Floorplan2Walkthru mirror",
       "sourceUrl": "https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/desk_lamp/desk_lamp.glb",
       "license": "CC-BY-4.0 — attribution required",
       "attribution": "Desk lamp by KaramellGlass, CC-BY-4.0",
-      "processing": "Upstream authored GLB vendored without geometry modification."
+      "processing": "Upstream authored GLB vendored without geometry modification. Geometry quantized with glTF Transform (KHR_mesh_quantization).",
+      "geometryCompression": "KHR_mesh_quantization"
     },
     {
       "id": "low-cabinet",
       "role": "Low cabinet",
       "file": "low-cabinet.glb",
-      "bytes": 1175932,
+      "bytes": 791788,
       "source": "Poly Haven modern_wooden_cabinet via Teetertater/Floorplan2Walkthru mirror",
       "sourceUrl": "https://raw.githubusercontent.com/Teetertater/Floorplan2Walkthru/main/public/assets/furniture/modern_wooden_cabinet_1k.gltf/modern_wooden_cabinet_1k.gltf",
       "license": "CC0 source asset",
       "attribution": null,
-      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB."
+      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB. Geometry quantized with glTF Transform (KHR_mesh_quantization).",
+      "geometryCompression": "KHR_mesh_quantization"
     },
     {
       "id": "potted-plant",
       "role": "Interior plant",
       "file": "potted-plant.glb",
-      "bytes": 245608,
+      "bytes": 175128,
       "source": "Poly Haven potted_plant_04 direct 2K glTF",
       "sourceUrl": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/2k/potted_plant_04/potted_plant_04_2k.gltf",
       "license": "CC0 source asset",
       "attribution": null,
-      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB."
+      "processing": "Authored mesh/buffer preserved; source textures removed; packed as local GLB. Geometry quantized with glTF Transform (KHR_mesh_quantization).",
+      "geometryCompression": "KHR_mesh_quantization"
     }
-  ]
+  ],
+  "optimization": {
+    "tool": "@gltf-transform/cli",
+    "version": "4.2.1",
+    "geometry": "KHR_mesh_quantization",
+    "rationale": "Decoder-free geometry quantization supported by Three.js GLTFLoader; avoids Draco/Meshopt runtime decoder dependency for RC1."
+  }
 }
