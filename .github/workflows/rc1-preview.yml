@@ -66,3 +66,21 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify public RC1 preview
+        shell: bash
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          test -n "$PAGE_URL"
+          preview_url="${PAGE_URL%/}/rc1-preview/"
+          app_url="${preview_url}app.html"
+          echo "RC1 preview: ${preview_url}"
+          curl --fail --show-error --silent --location --retry 6 --retry-delay 5 --retry-all-errors \
+            --output /tmp/rc1-index.html "$preview_url"
+          curl --fail --show-error --silent --location --retry 6 --retry-delay 5 --retry-all-errors \
+            --output /tmp/rc1-app.html "$app_url"
+          grep -q 'Michael Executive Studio RC1' /tmp/rc1-index.html
+          grep -q 'Michael Executive Studio' /tmp/rc1-app.html
+          echo "Public RC1 preview HTTP/content smoke PASS: ${app_url}"
