@@ -9,8 +9,9 @@ const ASSET_TIMEOUT = 45_000;
 const EXPECTED_ASSET_COUNT = 5;
 
 // Pixel targets are the projected centres of the six oversized Three.js hit boxes
-// from the canonical 1440x900 overview camera. They intentionally test the real
-// canvas raycaster path rather than calling internal move()/show() functions.
+// from the canonical 1440x900 overview camera. Each case reloads the canonical
+// overview before clicking so a previous GSAP camera tween cannot suppress the
+// next pointerdown. This still exercises the real canvas pointer/raycaster path.
 const hotspots = [
   { view: 'about', x: 660, y: 477, title: '黃連燈 Michael Huang' },
   { view: 'career', x: 616, y: 292, title: '從工程官到工程管理主管' },
@@ -37,24 +38,24 @@ try {
   page.on('pageerror', (error) => fatal.push(`pageerror: ${error.message}`));
   page.on('console', (msg) => { if (msg.type() === 'error') fatal.push(`console.error: ${msg.text()}`); });
 
-  const response = await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-  assert.ok(response?.ok(), 'hotspot smoke: app response not OK');
-  await page.locator('canvas').first().waitFor({ state: 'visible', timeout: READY_TIMEOUT });
-  await page.waitForFunction(
-    (count) => document.querySelector('#status')?.textContent?.includes(`real assets ${count}/${count} loaded`),
-    EXPECTED_ASSET_COUNT,
-    { timeout: ASSET_TIMEOUT },
-  );
-  record('renderer ready and five real assets loaded');
-
-  for (const hotspot of hotspots) {
-    await page.locator('.nav button[data-v="overview"]').click({ noWaitAfter: true });
-    await page.waitForTimeout(1250);
-    assert.equal(await page.locator('#panel').evaluate((node) => node.classList.contains('open')), false, `${hotspot.view}: overview reset did not close panel`);
+  for (const [index, hotspot] of hotspots.entries()) {
+    const response = index === 0
+      ? await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30_000 })
+      : await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 });
+    assert.ok(response?.ok(), `${hotspot.view}: app response not OK`);
+    await page.locator('canvas').first().waitFor({ state: 'visible', timeout: READY_TIMEOUT });
+    await page.waitForFunction(
+      (count) => document.querySelector('#status')?.textContent?.includes(`real assets ${count}/${count} loaded`),
+      EXPECTED_ASSET_COUNT,
+      { timeout: ASSET_TIMEOUT },
+    );
+    assert.equal(await page.locator('.nav button[data-v="overview"]').evaluate((node) => node.classList.contains('active')), true, `${hotspot.view}: canonical overview not active`);
+    assert.equal(await page.locator('#panel').evaluate((node) => node.classList.contains('open')), false, `${hotspot.view}: panel unexpectedly open before hotspot click`);
+    record(`${hotspot.view}: canonical overview ready; five real assets loaded`);
 
     record(`canvas hotspot ${hotspot.view} @ ${hotspot.x},${hotspot.y}`);
     await page.mouse.click(hotspot.x, hotspot.y);
-    await page.waitForTimeout(1250);
+    await page.waitForTimeout(250);
 
     const active = page.locator(`.nav button[data-v="${hotspot.view}"]`);
     assert.equal((await active.getAttribute('class'))?.includes('active'), true, `${hotspot.view}: canvas click did not activate matching navigation state`);
