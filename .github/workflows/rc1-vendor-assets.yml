@@ -54,7 +54,7 @@ jobs:
 
       - name: Commit generated assets to rc1
         run: |
-          if git diff --quiet -- assets/rc1 && [ -d assets/rc1 ]; then
+          if [ -z "$(git status --porcelain -- assets/rc1)" ]; then
             echo 'No asset changes to commit.'
             exit 0
           fi
