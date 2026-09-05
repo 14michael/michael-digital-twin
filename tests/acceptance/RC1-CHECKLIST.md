@@ -21,7 +21,7 @@
 | AT-15 | Hotspot | 場景點擊區正確，不需精準點擊高模物件 | TODO |
 | AT-16 | Regression | 完整循環 overview→About→Career→Projects→Portfolio→AI Lab→Education→overview 全 PASS | PASS |
 | AT-17 | Mobile UI | 390px 級手機寬度可操作，導覽與資訊面板不互相遮擋 | PASS |
-| AT-18 | Touch | 拖曳、點擊與面板操作不互相衝突 | TODO |
+| AT-18 | Touch | 拖曳、點擊與面板操作不互相衝突 | PASS |
 | AT-19 | Performance | 高解析度裝置有 DPR 上限；核心資產已壓縮 | PASS |
 | AT-20 | Privacy | 不公開手機、完整住址、推薦人聯絡資料 | TODO |
 | AT-21 | Resume Accuracy | 經歷、學歷、證照、專案名稱與年份符合履歷來源 | TODO |
@@ -52,6 +52,17 @@
 - Headless FPS remains diagnostic only because GitHub shared runners throttle `requestAnimationFrame`; no unsupported numeric CI FPS acceptance threshold is used.
 - Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33941010307
 
+### 2026-09-05 — GitHub Actions RC1 Gates Run #27 / AT-18
+
+- Commit: `82ce4578565efcd5c3d74c5aab7727d10a6175b5`
+- Browser: Playwright Chromium / GitHub Actions `ubuntu-latest`
+- Mobile viewport: `390 × 844`, mobile/touch emulation enabled.
+- Result: **Static contract and syntax PASS; Desktop/390px browser smoke PASS; native mobile touch/panel regression PASS.**
+- Touch test uses Chrome DevTools Protocol `Input.dispatchTouchEvent` to exercise a real browser touch stream instead of synthetic pointer events.
+- Verified sequence: canvas touch drag does not spuriously open the information panel; subsequent navigation remains operable; panel can be opened/closed; no fatal `console.error` / `pageerror` is introduced.
+- Covered acceptance item: AT-18.
+- Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33954417025
+
 ### 2026-09-05 — RC1 Vendor Assets Run #3 / AT-19
 
 - Source commit: `7ba827c15a96b7bcc93ce717e50e8d87f73f6de5`
@@ -66,7 +77,7 @@
 
 ### Remaining release work
 
-AT-19 is now PASS because the local core GLBs have explicit, reproducible geometry quantization evidence and the renderer DPR cap is already enforced. RC1 is still **not releasable** until the remaining visual UAT, hotspot/touch behavior, privacy/content accuracy, and deployment items are independently evidenced and marked PASS.
+AT-18 is now PASS because the native browser touch stream, drag behavior, navigation continuity, panel open/close behavior, and zero-fatal-console condition all passed in RC1 Gates Run #27. AT-19 remains PASS because the local core GLBs have explicit, reproducible geometry quantization evidence and the renderer DPR cap is enforced. RC1 is still **not releasable** until the remaining visual UAT, hotspot behavior, privacy/content accuracy, and deployment items are independently evidenced and marked PASS.
 
 ## Release Gate
 
