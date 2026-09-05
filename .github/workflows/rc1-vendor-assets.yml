@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   vendor-assets:
-    name: Vendor local RC1 GLB assets
+    name: Vendor and quantize local RC1 GLB assets
     runs-on: ubuntu-latest
     steps:
       - name: Checkout rc1
@@ -30,7 +30,43 @@ jobs:
       - name: Generate local real assets
         run: node scripts/vendor-rc1-assets.mjs
 
-      - name: Verify GLB headers and manifest
+      - name: Install glTF Transform
+        run: npm install --global @gltf-transform/cli@4.2.1
+
+      - name: Quantize authored GLB geometry
+        run: |
+          set -euo pipefail
+          for file in assets/rc1/*.glb; do
+            tmp="${file%.glb}.quantized.glb"
+            echo "Quantizing ${file}"
+            gltf-transform quantize "$file" "$tmp"
+            mv "$tmp" "$file"
+          done
+
+      - name: Refresh manifest compression evidence
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const manifestPath = 'assets/rc1/manifest.json';
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          for (const row of manifest.assets) {
+            const file = path.join('assets/rc1', row.file);
+            row.bytes = fs.statSync(file).size;
+            const note = 'Geometry quantized with glTF Transform (KHR_mesh_quantization).';
+            if (!row.processing.includes(note)) row.processing = `${row.processing} ${note}`;
+            row.geometryCompression = 'KHR_mesh_quantization';
+          }
+          manifest.optimization = {
+            tool: '@gltf-transform/cli',
+            version: '4.2.1',
+            geometry: 'KHR_mesh_quantization',
+            rationale: 'Decoder-free geometry quantization supported by Three.js GLTFLoader; avoids Draco/Meshopt runtime decoder dependency for RC1.'
+          };
+          fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+          NODE
+
+      - name: Verify GLB headers, quantization and manifest
         run: |
           node - <<'NODE'
           const fs = require('fs');
@@ -41,6 +77,7 @@ jobs:
           for (const id of required) {
             const row = manifest.assets.find((item) => item.id === id);
             if (!row) throw new Error(`missing manifest asset: ${id}`);
+            if (row.geometryCompression !== 'KHR_mesh_quantization') throw new Error(`missing quantization evidence: ${id}`);
             const file = path.join(dir, row.file);
             const data = fs.readFileSync(file);
             if (data.length < 32) throw new Error(`invalid GLB size: ${file}`);
@@ -48,7 +85,15 @@ jobs:
               throw new Error(`invalid GLB header: ${file}`);
             }
             if (data.readUInt32LE(8) !== data.length) throw new Error(`GLB length mismatch: ${file}`);
-            console.log(`PASS ${id} ${data.length} bytes`);
+            if (row.bytes !== data.length) throw new Error(`manifest byte mismatch: ${file}`);
+            const jsonChunkLength = data.readUInt32LE(12);
+            const jsonChunkType = data.readUInt32LE(16);
+            if (jsonChunkType !== 0x4e4f534a) throw new Error(`missing GLB JSON chunk: ${file}`);
+            const gltf = JSON.parse(data.subarray(20, 20 + jsonChunkLength).toString('utf8').trim());
+            if (!(gltf.extensionsUsed || []).includes('KHR_mesh_quantization')) {
+              throw new Error(`KHR_mesh_quantization extension missing from ${file}`);
+            }
+            console.log(`PASS ${id} ${data.length} bytes KHR_mesh_quantization`);
           }
           NODE
 
@@ -61,12 +106,13 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add assets/rc1
-          git commit -m 'build(rc1): vendor local real-asset GLBs'
+          git commit -m 'build(rc1): quantize local real-asset GLBs'
           git push origin HEAD:rc1
 
       - name: Record asset evidence
         if: always()
         run: |
           echo "Source commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Pipeline: scripts/vendor-rc1-assets.mjs" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pipeline: scripts/vendor-rc1-assets.mjs + glTF Transform 4.2.1 quantize" >> "$GITHUB_STEP_SUMMARY"
+          echo "Geometry compression: KHR_mesh_quantization" >> "$GITHUB_STEP_SUMMARY"
           echo "Output: assets/rc1/*.glb + manifest/license evidence" >> "$GITHUB_STEP_SUMMARY"
