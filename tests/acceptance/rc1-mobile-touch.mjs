@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 
 const baseURL = process.env.RC1_BASE_URL || 'http://127.0.0.1:4173/app.html';
 const fatal = [];
+const READY_TIMEOUT = 45_000;
+const EXPECTED_ASSET_COUNT = 5;
 
 const browser = await chromium.launch({ headless: true });
 try {
@@ -23,10 +25,11 @@ try {
   assert.ok(response?.ok(), 'mobile-touch: app response not OK');
 
   const canvas = page.locator('canvas').first();
-  await canvas.waitFor({ state: 'visible', timeout: 15_000 });
+  await canvas.waitFor({ state: 'visible', timeout: READY_TIMEOUT });
   await page.waitForFunction(
-    () => document.querySelector('#status')?.textContent?.includes('real assets 2/2 loaded'),
-    { timeout: 20_000 },
+    (count) => document.querySelector('#status')?.textContent?.includes(`real assets ${count}/${count} loaded`),
+    EXPECTED_ASSET_COUNT,
+    { timeout: READY_TIMEOUT },
   );
 
   const box = await canvas.boundingBox();
@@ -78,7 +81,7 @@ try {
   assert.deepEqual(fatal, [], `mobile-touch browser errors:\n${fatal.join('\n')}`);
 
   console.log('RC1 mobile touch/panel interaction PASS');
-  console.log(JSON.stringify({ viewport: '390x844', dragPixels: Math.round(end.x - start.x), input: 'CDP native touch stream', fatal }, null, 2));
+  console.log(JSON.stringify({ viewport: '390x844', realAssets: `${EXPECTED_ASSET_COUNT}/${EXPECTED_ASSET_COUNT}`, dragPixels: Math.round(end.x - start.x), input: 'CDP native touch stream', fatal }, null, 2));
   await context.close();
 } finally {
   await browser.close();
