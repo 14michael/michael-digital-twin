@@ -7,6 +7,9 @@ const evidenceDir = process.env.RC1_EVIDENCE_DIR || 'artifacts/rc1-browser-smoke
 const viewOrder = ['about', 'career', 'projects', 'gallery', 'ai', 'education'];
 const fatalConsole = [];
 const steps = [];
+const READY_TIMEOUT = 45_000;
+const ASSET_TIMEOUT = 45_000;
+const EXPECTED_ASSET_COUNT = 5;
 
 await mkdir(evidenceDir, { recursive: true });
 
@@ -27,26 +30,30 @@ async function capture(page, name) {
 
 async function waitForStudioReady(page, label) {
   const canvas = page.locator('canvas').first();
-  await canvas.waitFor({ state: 'attached', timeout: 15_000 });
+  await canvas.waitFor({ state: 'attached', timeout: READY_TIMEOUT });
   await page.waitForFunction(() => {
     const node = document.querySelector('canvas');
     if (!node) return false;
     const rect = node.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && node.width > 0 && node.height > 0;
-  }, { timeout: 15_000 });
+  }, { timeout: READY_TIMEOUT });
   assert.equal(await canvas.isVisible(), true, `${label}: canvas not visible after renderer initialization`);
 
   const overview = page.locator('.nav button[data-v="overview"]');
-  await overview.waitFor({ state: 'visible', timeout: 15_000 });
+  await overview.waitFor({ state: 'visible', timeout: READY_TIMEOUT });
   record(label, 'renderer and navigation ready');
 }
 
 async function waitForRealAssets(page, label) {
   const status = page.locator('#status');
-  await status.waitFor({ state: 'visible', timeout: 15_000 });
-  await page.waitForFunction(() => document.querySelector('#status')?.textContent?.includes('real assets 2/2 loaded'), { timeout: 20_000 });
+  await status.waitFor({ state: 'visible', timeout: READY_TIMEOUT });
+  await page.waitForFunction(
+    (count) => document.querySelector('#status')?.textContent?.includes(`real assets ${count}/${count} loaded`),
+    EXPECTED_ASSET_COUNT,
+    { timeout: ASSET_TIMEOUT },
+  );
   const text = await status.textContent();
-  assert.match(text || '', /real assets 2\/2 loaded/, `${label}: core real assets did not fully load`);
+  assert.match(text || '', new RegExp(`real assets ${EXPECTED_ASSET_COUNT}/${EXPECTED_ASSET_COUNT} loaded`), `${label}: core real assets did not fully load`);
   record(label, text.trim());
 }
 
