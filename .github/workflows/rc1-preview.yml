@@ -58,9 +58,6 @@ jobs:
           path: _site
 
   deploy-preview:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}rc1-preview/
     runs-on: ubuntu-latest
     needs: build-preview
     steps:
