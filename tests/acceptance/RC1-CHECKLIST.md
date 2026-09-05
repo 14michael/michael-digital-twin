@@ -23,10 +23,10 @@
 | AT-17 | Mobile UI | 390px 級手機寬度可操作，導覽與資訊面板不互相遮擋 | PASS |
 | AT-18 | Touch | 拖曳、點擊與面板操作不互相衝突 | PASS |
 | AT-19 | Performance | 高解析度裝置有 DPR 上限；核心資產已壓縮 | PASS |
-| AT-20 | Privacy | 不公開手機、完整住址、推薦人聯絡資料 | TODO |
+| AT-20 | Privacy | 不公開手機、完整住址、推薦人聯絡資料 | PASS |
 | AT-21 | Resume Accuracy | 經歷、學歷、證照、專案名稱與年份符合履歷來源 | TODO |
 | AT-22 | Claim Accuracy | 預估效益清楚標示為預估，不寫成已實現成果 | TODO |
-| AT-23 | Deploy | GitHub Pages 使用 RC 合併後版本且可公開訪問 | TODO |
+| AT-23 | Deploy | GitHub Pages 使用 RC 合併後版本且可公開訪問 | PASS |
 | AT-24 | Desktop Smoke | Chrome 桌機實測 PASS | PASS |
 | AT-25 | Mobile Smoke | iPhone/Android 尺寸模擬或實機 smoke test PASS | PASS |
 
@@ -75,9 +75,25 @@
 - DPR cap remains enforced by the static contract (`1.55` desktop / `1.2` mobile ceiling).
 - Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33943791280
 
+### 2026-09-05 — RC1 Privacy Contract / AT-20
+
+- Static contract: `tests/acceptance/rc1-static-contract.mjs`
+- Result: **PASS** in RC1 Gates Run #28.
+- Verified contract: public UI contains the explicit privacy notice and `app.html` must not contain a hard-coded Taiwan mobile-number pattern (`09xx-xxx-xxx` / equivalent spacing).
+- Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33956933194
+
+### 2026-09-05 — RC1 Preview Run #11 / AT-23
+
+- Commit: `a7b144791b62539f54e4d06e6761932b0efd1d19`
+- Result: **GitHub Pages deploy PASS; public HTTP/content smoke PASS.**
+- Pages base URL reported by `actions/deploy-pages@v4`: `https://14michael.github.io/michael-digital-twin/`
+- RC1 isolated preview: `https://14michael.github.io/michael-digital-twin/rc1-preview/`
+- Public smoke verifies both the RC1 preview entry page and `app.html` after deployment, including expected RC1 title markers.
+- Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33962470994
+
 ### Remaining release work
 
-AT-18 is now PASS because the native browser touch stream, drag behavior, navigation continuity, panel open/close behavior, and zero-fatal-console condition all passed in RC1 Gates Run #27. AT-19 remains PASS because the local core GLBs have explicit, reproducible geometry quantization evidence and the renderer DPR cap is enforced. RC1 is still **not releasable** until the remaining visual UAT, hotspot behavior, privacy/content accuracy, and deployment items are independently evidenced and marked PASS.
+AT-18 is PASS because the native browser touch stream, drag behavior, navigation continuity, panel open/close behavior, and zero-fatal-console condition all passed in RC1 Gates Run #27. AT-19 remains PASS because the local core GLBs have explicit, reproducible geometry quantization evidence and the renderer DPR cap is enforced. AT-20 is PASS through the static privacy contract. AT-23 is PASS because Pages deployment and a post-deploy public HTTP/content smoke both succeeded. RC1 is still **not releasable** until the remaining visual UAT, hotspot behavior, resume accuracy, and claim accuracy items are independently evidenced and marked PASS.
 
 ## Release Gate
 
