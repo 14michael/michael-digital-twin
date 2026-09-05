@@ -1,0 +1,69 @@
+name: RC1 Preview
+
+on:
+  push:
+    branches: [rc1]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: _site
+
+      - name: Checkout RC1 candidate
+        uses: actions/checkout@v4
+        with:
+          ref: rc1
+          path: _rc1
+
+      - name: Assemble public root plus isolated RC1 preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site/rc1-preview
+          mkdir -p _site/rc1-preview
+          rsync -a --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            _rc1/ _site/rc1-preview/
+          touch _site/.nojekyll
+          test -f _site/index.html
+          test -f _site/rc1-preview/index.html
+          test -f _site/rc1-preview/assets/rc1/executive-chair.glb
+          test -f _site/rc1-preview/assets/rc1/executive-desk.glb
+          test -f _site/rc1-preview/assets/rc1/desk-lamp.glb
+          test -f _site/rc1-preview/assets/rc1/low-cabinet.glb
+          test -f _site/rc1-preview/assets/rc1/potted-plant.glb
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-preview:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}rc1-preview/
+    runs-on: ubuntu-latest
+    needs: build-preview
+    steps:
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
