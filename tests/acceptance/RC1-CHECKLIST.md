@@ -4,7 +4,7 @@
 
 | ID | 驗收項目 | PASS 條件 | 狀態 |
 |---|---|---|---|
-| AT-01 | 首頁載入 | Desktop / Mobile 可正常載入，無致命 console error | TODO |
+| AT-01 | 首頁載入 | Desktop / Mobile 可正常載入，無致命 console error | PASS |
 | AT-02 | 視覺方向 | 暖色主管工作室成立，非白模／積木感 | TODO |
 | AT-03 | 主管椅 | 比例、曲面、材質可信，不可用簡化方塊冒充擬真 | TODO |
 | AT-04 | 主管桌 | 桌體、厚度、材質與桌面物件比例自然 | TODO |
@@ -15,20 +15,38 @@
 | AT-09 | Portfolio | 右牆不得只是色塊；正式版需接真實授權成果 | TODO |
 | AT-10 | AI Lab | AI 區域可辨識且可互動 | TODO |
 | AT-11 | Education | 學歷與證照內容正確、可讀 | TODO |
-| AT-12 | Navigation | About/Career/Projects/Portfolio/AI Lab/Education 全部可反覆切換 | TODO |
-| AT-13 | Overview Reset | 任一區域可回全景，回全景後互動仍正常 | TODO |
-| AT-14 | Theme | 日／夜模式可反覆切換，不破壞其他功能 | TODO |
+| AT-12 | Navigation | About/Career/Projects/Portfolio/AI Lab/Education 全部可反覆切換 | PASS |
+| AT-13 | Overview Reset | 任一區域可回全景，回全景後互動仍正常 | PASS |
+| AT-14 | Theme | 日／夜模式可反覆切換，不破壞其他功能 | PASS |
 | AT-15 | Hotspot | 場景點擊區正確，不需精準點擊高模物件 | TODO |
-| AT-16 | Regression | 完整循環 overview→About→Career→Projects→Portfolio→AI Lab→Education→overview 全 PASS | TODO |
-| AT-17 | Mobile UI | 390px 級手機寬度可操作，導覽與資訊面板不互相遮擋 | TODO |
+| AT-16 | Regression | 完整循環 overview→About→Career→Projects→Portfolio→AI Lab→Education→overview 全 PASS | PASS |
+| AT-17 | Mobile UI | 390px 級手機寬度可操作，導覽與資訊面板不互相遮擋 | PASS |
 | AT-18 | Touch | 拖曳、點擊與面板操作不互相衝突 | TODO |
 | AT-19 | Performance | 高解析度裝置有 DPR 上限；核心資產已壓縮 | TODO |
 | AT-20 | Privacy | 不公開手機、完整住址、推薦人聯絡資料 | TODO |
 | AT-21 | Resume Accuracy | 經歷、學歷、證照、專案名稱與年份符合履歷來源 | TODO |
 | AT-22 | Claim Accuracy | 預估效益清楚標示為預估，不寫成已實現成果 | TODO |
 | AT-23 | Deploy | GitHub Pages 使用 RC 合併後版本且可公開訪問 | TODO |
-| AT-24 | Desktop Smoke | Chrome 桌機實測 PASS | TODO |
-| AT-25 | Mobile Smoke | iPhone/Android 尺寸模擬或實機 smoke test PASS | TODO |
+| AT-24 | Desktop Smoke | Chrome 桌機實測 PASS | PASS |
+| AT-25 | Mobile Smoke | iPhone/Android 尺寸模擬或實機 smoke test PASS | PASS |
+
+## Acceptance Evidence
+
+### 2026-09-05 — GitHub Actions RC1 Gates Run #8
+
+- Commit: `c35a284e7329049784f1e1b7d5c41ad7421db21c`
+- Browser: Playwright Chromium / GitHub Actions `ubuntu-latest`
+- Desktop viewport: `1440 × 900`, DPR 1
+- Mobile viewport: `390 × 844`, DPR 2, `hasTouch: true`, `isMobile: true`
+- Result: **Desktop and 390px browser smoke PASS**
+- Covered acceptance items: AT-01, AT-12, AT-13, AT-14, AT-16, AT-17, AT-24, AT-25
+- Regression route exercised: `overview → About → Career → Projects → Portfolio → AI Lab → Education → overview`
+- Additional assertions: canvas renderer ready, all navigation buttons active when selected, panel opens/closes, theme round-trip returns to original state, mobile nav/panel do not overflow viewport, no fatal `console.error` / `pageerror`.
+- Evidence URL: https://github.com/14michael/michael-digital-twin/actions/runs/33931982658
+
+### Remaining release blocker
+
+RC-05 / AT-19 remains **TODO** because `src/real-assets.js` still loads core authored 3D assets from remote runtime URLs. `AGENTS.md` requires GLB / texture compression before release; therefore RC1 must not be merged to `main` until the assets are vendored/optimized locally and the static contract passes.
 
 ## Release Gate
 
