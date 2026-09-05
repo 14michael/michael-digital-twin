@@ -30,6 +30,7 @@ jobs:
           node --check tests/acceptance/rc1-static-contract.mjs
           node --check tests/acceptance/rc1-browser-smoke.mjs
           node --check tests/acceptance/rc1-mobile-touch.mjs
+          node --check tests/acceptance/rc1-hotspot-smoke.mjs
 
       - name: RC1 static acceptance contract
         run: node tests/acceptance/rc1-static-contract.mjs
@@ -79,6 +80,11 @@ jobs:
       - name: Run RC1 mobile touch/panel regression
         run: node tests/acceptance/rc1-mobile-touch.mjs
 
+      - name: Run RC1 real canvas hotspot regression
+        env:
+          RC1_EVIDENCE_DIR: artifacts/rc1-browser-smoke
+        run: node tests/acceptance/rc1-hotspot-smoke.mjs
+
       - name: Upload browser smoke diagnostics
         if: always()
         uses: actions/upload-artifact@v4
@@ -97,4 +103,5 @@ jobs:
           echo "Performance evidence: requestAnimationFrame is recorded as a headless diagnostic only; hardware/user-agent smoothness remains RC-05 UAT." >> "$GITHUB_STEP_SUMMARY"
           echo "Regression path: About → Career → Projects → Portfolio → AI Lab → Education → Overview; theme toggled twice; panel close verified." >> "$GITHUB_STEP_SUMMARY"
           echo "Touch evidence: 390x844 touch pointer drag must not open the content panel; navigation and panel close must still work after the gesture." >> "$GITHUB_STEP_SUMMARY"
+          echo "Hotspot evidence: six oversized Three.js hit boxes are clicked through the real canvas/raycaster path from the canonical 1440x900 overview camera; each must activate the matching view and content panel." >> "$GITHUB_STEP_SUMMARY"
           echo "Diagnostic artifact: rc1-browser-smoke-${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
