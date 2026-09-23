@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "meeting_id": "string",
+  "source_transcript_id": "string",
+  "events": [
+    {
+      "draft_event_id": "string",
+      "event_type": "FACT|PROGRESS|DECISION|ACTION|COMMITMENT|ISSUE|RISK|CHANGE|WORK_STOPPAGE|INFORMATION|UNKNOWN",
+      "domain": "GENERAL|PROCUREMENT|CONTRACT|COST|SCHEDULE|DESIGN|QUALITY|SAFETY|CONSTRUCTION",
+      "subject": "string",
+      "description": "string|null",
+      "quantity": {
+        "value": "number|null",
+        "unit": "string|null"
+      },
+      "owner_text": "string|null",
+      "vendor_text": "string|null",
+      "relative_due_text": "string|null",
+      "resolved_due_date": "YYYY-MM-DD|null",
+      "date_resolution_base": "YYYY-MM-DD|null",
+      "risk": {
+        "condition": "string|null",
+        "impact": "string|null"
+      },
+      "evidence": [
+        {
+          "segment_id": "string",
+          "start_ms": "integer",
+          "end_ms": "integer",
+          "speaker": "string|null",
+          "quote": "string"
+        }
+      ],
+      "confidence": "0..1",
+      "needs_review": true
+    }
+  ]
+}
