@@ -1,0 +1,45 @@
+[
+  {
+    "id": "GD-01",
+    "text": "防火門目前完成32樘，剩18樘。五金還有6組沒到，永盛說下週三會全部補齊。採購明天下班前再確認一次，如果再延誤會影響七樓裝修。",
+    "expected": [
+      "PROGRESS",
+      "ISSUE",
+      "COMMITMENT",
+      "ACTION",
+      "RISK"
+    ]
+  },
+  {
+    "id": "GD-02",
+    "text": "目前沒有停工，明天是否施工還沒決定。",
+    "expected": [
+      "INFORMATION"
+    ],
+    "note": "否定與未決事項不可推定停工或決議"
+  },
+  {
+    "id": "GD-03",
+    "text": "剛才說週五到貨不對，廠商改口是下週一。",
+    "expected": [
+      "INFORMATION"
+    ],
+    "note": "修正語句需人工覆核，不可保留舊日期為承諾"
+  },
+  {
+    "id": "GD-04",
+    "text": "業主提到可能追加，但金額與是否辦理變更都還沒確認。",
+    "expected": [
+      "INFORMATION"
+    ],
+    "note": "不得推定CHANGE已核准"
+  },
+  {
+    "id": "GD-05",
+    "text": "今天有人說這個應該是承包商的責任。",
+    "expected": [
+      "INFORMATION"
+    ],
+    "note": "不得由AI判定契約責任"
+  }
+]
