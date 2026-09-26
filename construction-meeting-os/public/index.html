@@ -28,11 +28,33 @@ let DATA,current;
 const zh={PROGRESS:'工程進度',ISSUE:'採購異常',COMMITMENT:'履約承諾',ACTION:'待辦事項',RISK:'進度風險',CONSTRUCTION:'施工',PROCUREMENT:'採購',SCHEDULE:'時程'};
 function extra(x){let a=[];if(x.owner_text)a.push('責任：'+x.owner_text);if(x.vendor_text)a.push('廠商：'+x.vendor_text);if(x.relative_due_text)a.push('期限：'+x.relative_due_text);if(x.quantity?.value)a.push('數量：'+x.quantity.value+' '+(x.quantity.unit||''));if(x.risk?.impact)a.push('影響：'+x.risk.impact);return a}
 async function load(){DATA=await fetch('/api/v1/demo').then(r=>r.json());meetingTitle.textContent=DATA.meeting.title;meetingSub.textContent=DATA.meeting.date+'｜'+DATA.meeting.status+'｜AI Draft 必須人工覆核';kAction.textContent=DATA.drafts.filter(x=>x.event_type==='ACTION'||x.event_type==='COMMITMENT').length;kRisk.textContent=DATA.drafts.filter(x=>x.event_type==='RISK').length;kIssue.textContent=DATA.drafts.filter(x=>x.event_type==='ISSUE').length;kDraft.textContent=DATA.drafts.length;
-drafts.innerHTML=DATA.drafts.map(x=>'<article class="event" data-type="'+x.event_type+'"><div class="event-top"><span class="badge">'+(zh[x.event_type]||x.event_type)+' · '+(zh[x.domain]||x.domain)+'</span><span class="badge draft-badge">待人工覆核</span></div><h3>'+x.subject+'</h3><div class="facts">'+extra(x).map(v=>'<span>'+v+'</span>').join('')+'</div><div class="evidence-ref">Evidence '+x.evidence[0].segment_id+' · AI Draft，不是正式紀錄</div><div class="actions"><button class="primary" onclick="openReview(\''+x.id+'\')">檢視並確認</button><button class="secondary" disabled>修改</button></div></article>').join('');
+drafts.innerHTML=DATA.drafts.map(x=>'<article class="event" data-type="'+x.event_type+'"><div class="event-top"><span class="badge">'+(zh[x.event_type]||x.event_type)+' · '+(zh[x.domain]||x.domain)+'</span><span class="badge draft-badge">待人工覆核</span></div><h3>'+x.subject+'</h3><div class="facts">'+extra(x).map(v=>'<span>'+v+'</span>').join('')+'</div><div class="evidence-ref">Evidence '+x.evidence[0].segment_id+' · AI Draft，不是正式紀錄</div><div class="actions"><button class="primary" onclick="openReview(\''+x.id+'\')">檢視並確認</button><button class="secondary" onclick="openEdit('${x.id}')">修改</button></div></article>').join('');
 evidence.innerHTML=DATA.segments.map(s=>'<div class="evidence"><div class="speaker"><b>'+s.speaker+'</b><span>'+s.id+' · '+Math.round(s.start_ms/1000)+'–'+Math.round(s.end_ms/1000)+' sec</span></div><div class="quote">'+s.text+'</div><small>原始 Evidence｜不可由 AI 覆寫</small></div>').join('');
 events.innerHTML=DATA.events.length?DATA.events.map(x=>'<div class="verified">✓ '+(zh[x.event_type]||x.event_type)+'｜'+x.subject+'<br><small>Verified by '+x.verified_by+' · Evidence '+x.evidence[0].segment_id+'</small></div>').join(''):'<div class="empty">尚無正式事件。AI Draft 不會自動進入正式紀錄。</div>'}
-function openReview(id){current=DATA.drafts.find(x=>x.id===id);let e=current.evidence[0];review.innerHTML='<div class="review-block"><label>AI 判讀</label><b>'+current.subject+'</b></div><div class="review-block"><label>事件類型 / 領域</label>'+(zh[current.event_type]||current.event_type)+' / '+(zh[current.domain]||current.domain)+'</div><div class="review-block"><label>原始 Evidence · '+e.segment_id+'</label>'+e.quote+'</div><div class="review-block"><label>人工覆核備註</label><textarea rows="3" placeholder="必要時記錄修改理由或補充說明"></textarea></div>';drawer.classList.add('open')}
-function closeDrawer(){drawer.classList.remove('open')}
+function openReview(id){document.querySelector('.drawer-card>.confirm').style.display='block';current=DATA.drafts.find(x=>x.id===id);let e=current.evidence[0];review.innerHTML='<div class="review-block"><label>AI 判讀</label><b>'+current.subject+'</b></div><div class="review-block"><label>事件類型 / 領域</label>'+(zh[current.event_type]||current.event_type)+' / '+(zh[current.domain]||current.domain)+'</div><div class="review-block"><label>原始 Evidence · '+e.segment_id+'</label>'+e.quote+'</div><div class="review-block"><label>人工覆核備註</label><textarea rows="3" placeholder="必要時記錄修改理由或補充說明"></textarea></div>';drawer.classList.add('open')}
+function openEdit(id){
+ current=DATA.drafts.find(x=>x.id===id);
+ const e=current.evidence[0];
+ document.querySelector('.drawer-card>.confirm').style.display='none';
+ review.innerHTML='<div class="review-block"><label>原始 Evidence · '+e.segment_id+'（唯讀）</label>'+e.quote+'</div>'+
+ '<div class="review-block"><label>事件內容</label><input id="editSubject"></div>'+
+ '<div class="review-block"><label>責任</label><input id="editOwner"></div>'+
+ '<div class="review-block"><label>期限</label><input id="editDue"></div>'+
+ '<div class="review-block"><label>修改理由 *</label><textarea id="editReason" rows="3" placeholder="必填：修改依據／理由"></textarea></div>'+
+ '<button class="confirm" onclick="saveEdit()">儲存 Human Revision</button>';
+ document.getElementById('editSubject').value=current.subject||'';
+ document.getElementById('editOwner').value=current.owner_text||'';
+ document.getElementById('editDue').value=current.relative_due_text||'';
+ drawer.classList.add('open');
+}
+async function saveEdit(){
+ const reason=document.getElementById('editReason').value.trim();
+ if(!reason)return alert('修改理由為必填');
+ const r=await fetch('/api/v1/draft-events/'+current.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({reviewer:'Michael',reason,subject:document.getElementById('editSubject').value,owner_text:document.getElementById('editOwner').value,relative_due_text:document.getElementById('editDue').value})});
+ const x=await r.json(); if(!r.ok)return alert(x.error?.message||'修改失敗');
+ closeDrawer(); await load(); toast.textContent='Human Revision 已儲存；原始 Evidence 保留。';toast.style.display='block';setTimeout(()=>toast.style.display='none',1800);
+}
+function closeDrawer(){drawer.classList.remove('open');document.querySelector('.drawer-card>.confirm').style.display='block'}
 async function confirmVerify(){if(!current)return;let r=await fetch('/api/v1/draft-events/'+current.id+'/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({reviewer:'Michael'})});if(!r.ok){alert('Gate 驗證失敗');return}closeDrawer();toast.style.display='block';setTimeout(()=>toast.style.display='none',1800);await load()}
 load();
 </script></body></html>
